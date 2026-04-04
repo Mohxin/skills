@@ -1,138 +1,131 @@
-# ClearBudget - YNAB Style Budgeting App
+# ClearBudget — YNAB Style Budgeting App
 
-A full-stack YNAB-style envelope budgeting app built with React, Supabase, and deployed on Vercel.
+A modern, full-featured envelope budgeting app built with React, Supabase, and deployed on Vercel.
 
-## Features
+## ✨ Features
 
-- 🎯 **Envelope Budgeting** — Assign every dollar a job
-- 💳 **Transaction Management** — Track income & expenses across accounts
-- 🏦 **Account Management** — Checking, savings, credit cards, cash
-- 🎯 **Goals Tracking** — Savings targets with progress tracking
-- 📊 **Reports & Charts** — Pie charts, bar graphs, spending trends
-- 🌙 **Dark Mode** — Toggle or auto-detect from system preference
-- 💱 **Multi-Currency** — 20 currencies supported
-- 📱 **Responsive** — Works on mobile, tablet, and desktop
+### 💰 Budgeting
+- 🎯 **Envelope Budgeting** — Give every dollar a job
+- 📅 **Monthly Rollover** — Unspent money carries forward
+- ⚠️ **Over-Budget Alerts** — Real-time warnings on dashboard
+- 📊 **Category Groups** — Organized budget categories
 
-## Tech Stack
+### 💳 Transactions
+- ➕ **Quick Add** — Fast transaction entry
+- 🔍 **Search & Filter** — By payee, category, account
+- 📥 **CSV Export** — Download your data anytime
+- 🏷️ **Tags** — Organize transactions with custom tags
+- ✏️ **Full CRUD** — Edit, delete, clear transactions
 
-- **Frontend**: React 18 + Vite + Tailwind CSS + Recharts
-- **Backend**: Vercel Serverless Functions (Node.js)
-- **Database**: Supabase (PostgreSQL)
-- **Deployment**: Vercel
+### 🔄 Recurring Bills
+- 📋 **Bill Tracker** — Never miss a payment
+- 📆 **Multiple Frequencies** — Weekly, bi-weekly, monthly, yearly
+- ⏭️ **Skip Forward** — Advance to next occurrence
+- 🔇 **Enable/Disable** — Toggle without deleting
+- 📊 **Monthly Summary** — Total recurring costs
 
-## Quick Start
+### 🎯 Goals
+- 🏔️ **Savings Targets** — Track progress visually
+- 💵 **Contributions** — Add money incrementally
+- 📅 **Target Dates** — Set deadlines for your goals
+- 📈 **Progress Bars** — See how close you are
 
-### 1. Clone & Install
+### 💱 Multi-Currency
+- 🌍 **20 Currencies** — USD, EUR, GBP, JPY, CAD, AUD, and more
+- 💾 **Persistent** — Your choice is saved
+- 🔄 **Auto-Format** — Correct locale formatting
+
+### 🌙 Modern UI
+- 🎨 **Dark Mode** — Toggle or auto-detect from system
+- 📱 **Responsive** — Mobile, tablet, desktop
+- ✨ **Smooth Animations** — Page transitions, staggered cards
+- ♿ **Accessible** — ARIA labels, keyboard navigation, focus trapping
+- 🔔 **Toast Notifications** — Success/error feedback
+
+### 📊 Insights & Reports
+- 🧠 **Spending Insights** — Top merchants, daily average, projected spend
+- 🥧 **Pie Charts** — Spending by category
+- 📊 **Bar Charts** — Monthly spending trends
+- 📋 **Summary Tables** — Budget vs actual with percentages
+
+### 🏦 Accounts
+- 💼 **Multiple Types** — Checking, savings, credit, cash
+- 💎 **Net Worth** — Automatic calculation
+- 🎨 **Colored Icons** — Visual distinction
+
+## 🚀 Quick Start
 
 ```bash
-git clone <repo-url> clearbudget
-cd clearbudget
+# Install dependencies
 npm install
 cd frontend && npm install && cd ..
-```
 
-### 2. Set Up Supabase
+# Set up Supabase (run SQL in backend/src/db/migrate.sql)
 
-1. Go to your Supabase SQL Editor
-2. Paste contents of `backend/src/db/migrate.sql` and click Run
-3. This creates all tables and disables Row Level Security
+# Seed realistic dummy data (6 months of transactions)
+cd backend && npm install && npm run db:seed
 
-### 3. Set Environment Variables
-
-```bash
-# Root .env (for Vercel API routes)
-cp .env.example .env
-# Fill in your Supabase URL and keys
-
-# Frontend .env (for client-side)
-cp frontend/.env.example frontend/.env
-# Fill in Supabase URL and anon key
-```
-
-### 4. Run Locally
-
-```bash
-# Option A: Frontend only (uses Supabase directly)
-cd frontend && npm run dev
-
-# Option B: Full stack (frontend + local Express backend)
-cd backend && npm install && npm run dev
-# In another terminal:
+# Start dev server
 cd frontend && npm run dev
 ```
 
-## Deploy to Vercel
-
-### One-Click Deploy
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
-
-### CLI Deploy
+## 📦 Deploy to Vercel
 
 ```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Login
-vercel login
-
-# Deploy
-vercel
+npx vercel
 ```
 
-### Required Environment Variables (Vercel)
+Add these environment variables in Vercel:
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
 
-Add these in Vercel → Settings → Environment Variables:
+## 🏗️ Tech Stack
 
-| Variable | Value |
-|----------|-------|
-| `SUPABASE_URL` | Your Supabase project URL |
-| `SUPABASE_ANON_KEY` | Your Supabase anon/public key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Your Supabase service role key (for serverless API) |
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18 + Vite + Tailwind CSS |
+| Charts | Recharts |
+| Backend | Vercel Serverless Functions |
+| Database | Supabase (PostgreSQL) |
+| Deployment | Vercel |
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 clearbudget/
-├── api/
-│   └── index.js              # Vercel serverless API (all routes)
+├── api/index.js              # Vercel serverless API (all routes)
 ├── frontend/
 │   ├── src/
 │   │   ├── components/       # Sidebar, Modal, Toast, Skeleton
-│   │   ├── context/          # Currency context (20 currencies)
-│   │   ├── pages/            # Dashboard, Budget, Transactions, etc.
-│   │   ├── api.js            # Axios API client
-│   │   ├── App.jsx           # Main app with routing + dark mode
-│   │   └── main.jsx          # Entry point
-│   ├── vite.config.js
-│   ├── tailwind.config.js
+│   │   ├── context/          # Currency context
+│   │   ├── hooks/            # Custom hooks (keyboard shortcuts)
+│   │   ├── pages/            # 8 pages
+│   │   ├── api.js            # API client
+│   │   └── App.jsx           # Main app
 │   └── package.json
-├── backend/                   # Local Express (dev only)
+├── backend/
+│   └── src/db/
+│       ├── migrate.sql       # Database schema
+│       └── seed.js           # Dummy data seeder
 ├── vercel.json
 └── package.json
 ```
 
-## API Endpoints
+## 🔑 API Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/accounts` | List all accounts |
-| POST | `/api/accounts` | Create account |
-| PUT | `/api/accounts?id=1` | Update account |
-| DELETE | `/api/accounts?id=1` | Delete account |
-| GET | `/api/transactions` | List all transactions |
-| POST | `/api/transactions` | Create transaction |
-| PUT | `/api/transactions?id=1` | Update transaction |
-| DELETE | `/api/transactions?id=1` | Delete transaction |
-| GET | `/api/categories/groups` | Category groups with categories |
-| PUT | `/api/categories/1/budget` | Update category budget |
-| GET | `/api/goals` | List all goals |
-| POST | `/api/goals` | Create goal |
-| POST | `/api/goals/1/contribute` | Add to goal |
+| GET/POST | `/api/accounts` | Account CRUD |
+| GET/POST | `/api/transactions` | Transaction CRUD |
+| GET/POST | `/api/categories/groups` | Category groups |
+| GET/POST/PUT/DELETE | `/api/recurring` | Recurring bills |
+| GET/POST/PUT/DELETE | `/api/goals` | Goals CRUD |
 | GET | `/api/reports/overview` | Budget overview |
+| GET | `/api/reports/insights` | Spending insights |
 | GET | `/api/reports/spending-by-category` | Monthly spending |
 | GET | `/api/reports/monthly-trends` | 6-month trends |
 
-## Supported Currencies
+## 🌍 Supported Currencies
 
 USD, EUR, GBP, JPY, CAD, AUD, CHF, CNY, INR, BRL, MXN, SGD, NZD, SEK, NOK, DKK, ZAR, AED, SAR, KRW

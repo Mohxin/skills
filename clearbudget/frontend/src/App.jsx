@@ -9,6 +9,8 @@ import Budget from './pages/Budget';
 import Accounts from './pages/Accounts';
 import Goals from './pages/Goals';
 import Reports from './pages/Reports';
+import Recurring from './pages/Recurring';
+import Insights from './pages/Insights';
 
 function useDarkMode() {
   const [dark, setDark] = useState(() => {
@@ -96,8 +98,10 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/transactions" element={<Transactions />} />
               <Route path="/budget" element={<Budget />} />
+              <Route path="/recurring" element={<Recurring />} />
               <Route path="/accounts" element={<Accounts />} />
               <Route path="/goals" element={<Goals />} />
+              <Route path="/insights" element={<Insights />} />
               <Route path="/reports" element={<Reports />} />
             </Routes>
           </div>

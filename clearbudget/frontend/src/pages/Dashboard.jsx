@@ -56,6 +56,7 @@ function Dashboard() {
   const [overview, setOverview] = useState(null);
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [spending, setSpending] = useState([]);
+  const [overBudget, setOverBudget] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -67,6 +68,12 @@ function Dashboard() {
       setOverview(overviewRes.data);
       setRecentTransactions(transactionsRes.data);
       setSpending(spendingRes.data.slice(0, 5));
+      // Find over-budget categories
+      const over = spendingRes.data.filter(item => {
+        const available = parseFloat(item.available);
+        return available < 0;
+      });
+      setOverBudget(over);
       setLoading(false);
     }).catch(err => {
       console.error('Failed to load dashboard data:', err);
@@ -90,6 +97,33 @@ function Dashboard() {
           Quick Add
         </Link>
       </div>
+
+      {/* Over-Budget Alert */}
+      {overBudget.length > 0 && (
+        <div className="card bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-red-200 dark:border-red-800" role="alert">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-red-100 dark:bg-red-900/50 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-red-900 dark:text-red-200">Over Budget!</h3>
+              <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                {overBudget.length} categor{overBudget.length > 1 ? 'ies are' : 'y is'} over budget this month
+              </p>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {overBudget.map((item, i) => (
+                  <span key={i} className="inline-flex items-center gap-1 bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200 text-sm font-medium px-3 py-1 rounded-full">
+                    {item.category}
+                    <span className="text-red-600 dark:text-red-400">{formatCurrency(item.available)}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">

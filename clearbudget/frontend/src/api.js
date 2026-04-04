@@ -4,24 +4,22 @@ const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' 
 
 const api = axios.create({
   baseURL: API_BASE,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 });
 
 // Accounts
 export const getAccounts = () => api.get('/accounts');
-export const getAccount = (id) => api.get(`/accounts/${id}`);
+export const getAccount = (id) => api.get(`/accounts?id=${id}`);
 export const createAccount = (data) => api.post('/accounts', data);
-export const updateAccount = (id, data) => api.put(`/accounts/${id}`, data);
-export const deleteAccount = (id) => api.delete(`/accounts/${id}`);
+export const updateAccount = (id, data) => api.put(`/accounts?id=${id}`, data);
+export const deleteAccount = (id) => api.delete(`/accounts?id=${id}`);
 
 // Transactions
 export const getTransactions = () => api.get('/transactions');
-export const getTransaction = (id) => api.get(`/transactions/${id}`);
+export const getTransaction = (id) => api.get(`/transactions?id=${id}`);
 export const createTransaction = (data) => api.post('/transactions', data);
-export const updateTransaction = (id, data) => api.put(`/transactions/${id}`, data);
-export const deleteTransaction = (id) => api.delete(`/transactions/${id}`);
+export const updateTransaction = (id, data) => api.put(`/transactions?id=${id}`, data);
+export const deleteTransaction = (id) => api.delete(`/transactions?id=${id}`);
 
 // Categories
 export const getCategoryGroups = () => api.get('/categories/groups');
@@ -39,10 +37,18 @@ export const updateGoal = (id, data) => api.put(`/goals/${id}`, data);
 export const contributeToGoal = (id, data) => api.post(`/goals/${id}/contribute`, data);
 export const deleteGoal = (id) => api.delete(`/goals/${id}`);
 
+// Recurring Transactions
+export const getRecurring = () => api.get('/recurring');
+export const createRecurring = (data) => api.post('/recurring', data);
+export const updateRecurring = (id, data) => api.put(`/recurring/${id}`, data);
+export const skipRecurring = (id) => api.patch(`/recurring/${id}/skip`, {});
+export const deleteRecurring = (id) => api.delete(`/recurring/${id}`);
+
 // Reports
 export const getBudgetOverview = () => api.get('/reports/overview');
 export const getSpendingByCategory = () => api.get('/reports/spending-by-category');
 export const getMonthlyTrends = () => api.get('/reports/monthly-trends');
 export const getRecentTransactions = (limit = 10) => api.get(`/reports/recent-transactions?limit=${limit}`);
+export const getInsights = () => api.get('/reports/insights');
 
 export default api;

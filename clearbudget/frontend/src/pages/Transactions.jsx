@@ -16,6 +16,27 @@ const emptyForm = {
   type: 'expense',
 };
 
+function exportToCSV(transactions) {
+  const headers = ['Date', 'Payee', 'Category', 'Memo', 'Amount', 'Account', 'Cleared'];
+  const rows = transactions.map(tx => [
+    tx.date,
+    tx.payee || '',
+    tx.category_name || 'Uncategorized',
+    tx.memo || '',
+    tx.amount,
+    tx.account_name || '',
+    tx.cleared ? 'Yes' : 'No',
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `transactions_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function Transactions() {
   const { formatCurrency } = useCurrency();
   const toast = useToast();
@@ -115,17 +136,25 @@ function Transactions() {
 
   return (
     <div className="space-y-6 page-transition">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-surface-900 dark:text-surface-50">Transactions</h1>
           <p className="text-surface-500 dark:text-surface-400 mt-1">{filteredTransactions.length} transactions</p>
         </div>
-        <button className="btn-primary flex items-center gap-2" onClick={() => openModal()}>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Add Transaction
-        </button>
+        <div className="flex gap-2">
+          <button className="btn-secondary flex items-center gap-2" onClick={() => exportToCSV(filteredTransactions)} title="Export to CSV">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export CSV
+          </button>
+          <button className="btn-primary flex items-center gap-2" onClick={() => openModal()}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Transaction
+          </button>
+        </div>
       </div>
 
       {/* Filters */}

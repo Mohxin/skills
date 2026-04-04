@@ -241,6 +241,105 @@ export default async function handler(req, res) {
         if (e) return serverErr(res, e.message);
         return ok(res, data.map(fmtTx));
       }
+      // GET /api/reports/insights
+      if (path[1] === 'insights') {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const end = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().split('T')[0];
+        const { data } = await supabase.from('transactions').select('payee, amount, date').gte('date', start).lt('date', end).lt('amount', 0);
+        if (!data?.length) return ok(res, { totalSpent: 0, avgDaily: 0, topMerchants: [], topCategories: [], transactionCount: 0 });
+
+        const totalSpent = data.reduce((s, t) => s + Math.abs(parseFloat(t.amount)), 0);
+        const daysSoFar = Math.max(now.getDate(), 1);
+        const avgDaily = totalSpent / daysSoFar;
+
+        // Top merchants
+        const merchantMap = {};
+        data.forEach(tx => {
+          if (!tx.payee) return;
+          if (!merchantMap[tx.payee]) merchantMap[tx.payee] = { payee: tx.payee, total: 0, count: 0 };
+          merchantMap[tx.payee].total += Math.abs(parseFloat(tx.amount));
+          merchantMap[tx.payee].count++;
+        });
+        const topMerchants = Object.values(merchantMap).sort((a, b) => b.total - a.total).slice(0, 5);
+
+        // Top categories
+        const { data: txWithCats } = await supabase.from('transactions').select('amount, categories(name)').gte('date', start).lt('date', end).lt('amount', 0);
+        const catMap = {};
+        txWithCats?.forEach(tx => {
+          const name = tx.categories?.name || 'Uncategorized';
+          if (!catMap[name]) catMap[name] = { category: name, total: 0 };
+          catMap[name].total += Math.abs(parseFloat(tx.amount));
+        });
+        const topCategories = Object.values(catMap).sort((a, b) => b.total - a.total).slice(0, 5);
+
+        return ok(res, { totalSpent, avgDaily, topMerchants, topCategories, transactionCount: data.length });
+      }
+    }
+
+    // === RECURRING TRANSACTIONS ===
+    if (path[0] === 'recurring') {
+      if (req.method === 'GET') {
+        const { data, error: e } = await supabase.from('recurring_transactions').select('*, accounts(name), categories(name)').order('next_due', { ascending: true });
+        if (e) return serverErr(res, e.message);
+        return ok(res, data.map(r => ({
+          ...r,
+          account_name: r.accounts?.name,
+          category_name: r.categories?.name,
+          accounts: undefined,
+          categories: undefined,
+        })));
+      }
+      if (req.method === 'POST') {
+        const body = await parseBody(req);
+        const { data, error: e } = await supabase.from('recurring_transactions').insert({
+          account_id: body.account_id,
+          category_id: body.category_id || null,
+          payee: body.payee,
+          amount: body.amount,
+          frequency: body.frequency || 'monthly',
+          start_date: body.start_date || d(0),
+          next_due: body.next_due,
+          enabled: body.enabled !== false,
+        }).select().single();
+        if (e) return serverErr(res, e.message);
+        return created(res, data);
+      }
+      if (req.method === 'PUT') {
+        const body = await parseBody(req);
+        const { data, error: e } = await supabase.from('recurring_transactions').update({
+          account_id: body.account_id,
+          category_id: body.category_id || null,
+          payee: body.payee,
+          amount: body.amount,
+          frequency: body.frequency,
+          next_due: body.next_due,
+          enabled: body.enabled,
+          updated_at: new Date().toISOString(),
+        }).eq('id', path[1]).select().single();
+        if (e) return serverErr(res, e.message);
+        if (!data) return notFound(res);
+        return ok(res, data);
+      }
+      if (req.method === 'DELETE') {
+        const { data, error: e } = await supabase.from('recurring_transactions').delete().eq('id', path[1]).select();
+        if (e) return serverErr(res, e.message);
+        if (!data?.length) return notFound(res);
+        return ok(res, { message: 'Recurring transaction deleted' });
+      }
+      if (req.method === 'PATCH' && path[2] === 'skip') {
+        // Skip to next occurrence
+        const { data: rec } = await supabase.from('recurring_transactions').select('next_due, frequency').eq('id', path[1]).single();
+        if (!rec) return notFound(res);
+        const next = new Date(rec.next_due);
+        if (rec.frequency === 'monthly') next.setMonth(next.getMonth() + 1);
+        else if (rec.frequency === 'weekly') next.setDate(next.getDate() + 7);
+        else if (rec.frequency === 'biweekly') next.setDate(next.getDate() + 14);
+        else if (rec.frequency === 'yearly') next.setFullYear(next.getFullYear() + 1);
+        const { data, error: e } = await supabase.from('recurring_transactions').update({ next_due: next.toISOString().split('T')[0] }).eq('id', path[1]).select().single();
+        if (e) return serverErr(res, e.message);
+        return ok(res, data);
+      }
     }
 
     return json(res, 404, { error: 'Endpoint not found' });

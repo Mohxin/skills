@@ -1,11 +1,13 @@
--- Run this SQL in your Supabase SQL Editor to set up the schema
--- Go to: https://app.supabase.com/project/jzzkkavjijfadpzniaci/sql
+-- ClearBudget Schema v2
+-- Run this in Supabase SQL Editor: https://app.supabase.com/project/jzzkkavjijfadpzniaci/sql
 
 CREATE TABLE IF NOT EXISTS accounts (
   id SERIAL PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   type VARCHAR(50) NOT NULL DEFAULT 'checking',
   balance NUMERIC(15, 2) NOT NULL DEFAULT 0,
+  icon VARCHAR(20) DEFAULT 'credit-card',
+  color VARCHAR(20) DEFAULT 'blue',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -13,6 +15,8 @@ CREATE TABLE IF NOT EXISTS accounts (
 CREATE TABLE IF NOT EXISTS category_groups (
   id SERIAL PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
+  icon VARCHAR(20),
+  sort_order INTEGER DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -22,6 +26,7 @@ CREATE TABLE IF NOT EXISTS categories (
   name VARCHAR(100) NOT NULL,
   budgeted NUMERIC(15, 2) NOT NULL DEFAULT 0,
   activity NUMERIC(15, 2) NOT NULL DEFAULT 0,
+  previous_rollover NUMERIC(15, 2) NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -34,6 +39,21 @@ CREATE TABLE IF NOT EXISTS transactions (
   memo TEXT,
   amount NUMERIC(15, 2) NOT NULL,
   cleared BOOLEAN DEFAULT false,
+  tags TEXT[],
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS recurring_transactions (
+  id SERIAL PRIMARY KEY,
+  account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
+  category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+  payee VARCHAR(200) NOT NULL,
+  amount NUMERIC(15, 2) NOT NULL,
+  frequency VARCHAR(20) NOT NULL DEFAULT 'monthly',
+  start_date DATE NOT NULL,
+  next_due DATE,
+  enabled BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -45,14 +65,24 @@ CREATE TABLE IF NOT EXISTS goals (
   target_amount NUMERIC(15, 2) NOT NULL,
   current_amount NUMERIC(15, 2) NOT NULL DEFAULT 0,
   target_date DATE,
+  monthly_contribution NUMERIC(15, 2) DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Disable Row Level Security (RLS) so the app can read/write freely
--- This is a personal budgeting app without user authentication
+CREATE TABLE IF NOT EXISTS budget_months (
+  id SERIAL PRIMARY KEY,
+  month VARCHAR(7) NOT NULL UNIQUE,
+  income NUMERIC(15, 2) NOT NULL DEFAULT 0,
+  to_be_budgeted NUMERIC(15, 2) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Disable Row Level Security
 ALTER TABLE accounts DISABLE ROW LEVEL SECURITY;
 ALTER TABLE category_groups DISABLE ROW LEVEL SECURITY;
 ALTER TABLE categories DISABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE recurring_transactions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE goals DISABLE ROW LEVEL SECURITY;
+ALTER TABLE budget_months DISABLE ROW LEVEL SECURITY;
