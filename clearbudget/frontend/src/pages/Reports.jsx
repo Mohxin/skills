@@ -23,6 +23,8 @@ function Reports() {
   const [trendsData, setTrendsData] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [error, setError] = useState(null);
+
   useEffect(() => {
     Promise.all([getSpendingByCategory(), getMonthlyTrends()])
       .then(([spendingRes, trendsRes]) => {
@@ -30,7 +32,11 @@ function Reports() {
         setTrendsData(trendsRes.data);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(err => {
+        console.error('Reports error:', err);
+        setError(err.response?.data?.error || err.message);
+        setLoading(false);
+      });
   }, []);
 
   const pieData = spendingData.map(item => ({
@@ -55,6 +61,16 @@ function Reports() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <SkeletonCard />
       <SkeletonCard />
+    </div>
+  );
+
+  if (error) return (
+    <div className="card bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-center py-12">
+      <svg className="w-12 h-12 mx-auto text-red-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+      <h3 className="text-lg font-semibold text-red-800 dark:text-red-200">Failed to load reports</h3>
+      <p className="text-sm text-red-600 dark:text-red-300 mt-2">{error}</p>
     </div>
   );
 

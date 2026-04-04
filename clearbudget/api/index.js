@@ -213,24 +213,40 @@ export default async function handler(req, res) {
         const now = new Date();
         const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
         const end = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().split('T')[0];
-        const { data, error: e } = await supabase.from('transactions').select('amount, categories(name, budgeted, activity, category_groups(name))').gte('date', start).lt('date', end).lt('amount', 0);
+
+        // Get transactions
+        const { data: txns, error: e } = await supabase.from('transactions').select('amount, category_id').gte('date', start).lt('date', end).lt('amount', 0);
         if (e) return serverErr(res, e.message);
+
+        // Get categories separately
+        const { data: cats } = await supabase.from('categories').select('id, name, budgeted, activity, category_groups(name)');
+        const catMap = {};
+        cats?.forEach(c => { catMap[c.id] = c; });
+
         const map = {};
-        data?.forEach(tx => {
-          const id = tx.categories?.id; if (!id) return;
-          if (!map[id]) map[id] = { category: tx.categories?.name, group_name: tx.categories?.category_groups?.name, spent: 0, budgeted: parseFloat(tx.categories?.budgeted || 0), available: parseFloat(tx.categories?.activity || 0) + parseFloat(tx.categories?.budgeted || 0) };
+        txns?.forEach(tx => {
+          const id = tx.category_id;
+          if (!id || !catMap[id]) return;
+          const cat = catMap[id];
+          if (!map[id]) map[id] = { category: cat.name, group_name: cat.category_groups?.name, spent: 0, budgeted: parseFloat(cat.budgeted || 0), available: parseFloat(cat.activity || 0) + parseFloat(cat.budgeted || 0) };
           map[id].spent += Math.abs(parseFloat(tx.amount));
         });
         return ok(res, Object.values(map).sort((a, b) => b.spent - a.spent));
       }
       if (path[1] === 'monthly-trends') {
         const ago = new Date(); ago.setMonth(ago.getMonth() - 5); ago.setDate(1);
-        const { data, error: e } = await supabase.from('transactions').select('date, amount, categories(name)').gte('date', ago.toISOString().split('T')[0]).lt('amount', 0);
+        const { data: txns, error: e } = await supabase.from('transactions').select('date, amount, category_id').gte('date', ago.toISOString().split('T')[0]).lt('amount', 0);
         if (e) return serverErr(res, e.message);
+
+        const { data: cats } = await supabase.from('categories').select('id, name');
+        const catMap = {};
+        cats?.forEach(c => { catMap[c.id] = c.name; });
+
         const map = {};
-        data?.forEach(tx => {
-          const k = `${tx.date.substring(0, 7)}-${tx.categories?.name}`;
-          if (!map[k]) map[k] = { month: tx.date.substring(0, 7), category: tx.categories?.name, spent: 0 };
+        txns?.forEach(tx => {
+          const catName = catMap[tx.category_id] || 'Uncategorized';
+          const k = `${tx.date.substring(0, 7)}-${catName}`;
+          if (!map[k]) map[k] = { month: tx.date.substring(0, 7), category: catName, spent: 0 };
           map[k].spent += Math.abs(parseFloat(tx.amount));
         });
         return ok(res, Object.values(map).sort((a, b) => b.month.localeCompare(a.month) || b.spent - a.spent));
@@ -246,16 +262,16 @@ export default async function handler(req, res) {
         const now = new Date();
         const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
         const end = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().split('T')[0];
-        const { data } = await supabase.from('transactions').select('payee, amount, date').gte('date', start).lt('date', end).lt('amount', 0);
-        if (!data?.length) return ok(res, { totalSpent: 0, avgDaily: 0, topMerchants: [], topCategories: [], transactionCount: 0 });
+        const { data: txns } = await supabase.from('transactions').select('payee, amount, date, category_id').gte('date', start).lt('date', end).lt('amount', 0);
+        if (!txns?.length) return ok(res, { totalSpent: 0, avgDaily: 0, topMerchants: [], topCategories: [], transactionCount: 0 });
 
-        const totalSpent = data.reduce((s, t) => s + Math.abs(parseFloat(t.amount)), 0);
+        const totalSpent = txns.reduce((s, t) => s + Math.abs(parseFloat(t.amount)), 0);
         const daysSoFar = Math.max(now.getDate(), 1);
         const avgDaily = totalSpent / daysSoFar;
 
         // Top merchants
         const merchantMap = {};
-        data.forEach(tx => {
+        txns.forEach(tx => {
           if (!tx.payee) return;
           if (!merchantMap[tx.payee]) merchantMap[tx.payee] = { payee: tx.payee, total: 0, count: 0 };
           merchantMap[tx.payee].total += Math.abs(parseFloat(tx.amount));
@@ -264,16 +280,18 @@ export default async function handler(req, res) {
         const topMerchants = Object.values(merchantMap).sort((a, b) => b.total - a.total).slice(0, 5);
 
         // Top categories
-        const { data: txWithCats } = await supabase.from('transactions').select('amount, categories(name)').gte('date', start).lt('date', end).lt('amount', 0);
+        const { data: cats } = await supabase.from('categories').select('id, name');
+        const catNameMap = {};
+        cats?.forEach(c => { catNameMap[c.id] = c.name; });
         const catMap = {};
-        txWithCats?.forEach(tx => {
-          const name = tx.categories?.name || 'Uncategorized';
+        txns.forEach(tx => {
+          const name = catNameMap[tx.category_id] || 'Uncategorized';
           if (!catMap[name]) catMap[name] = { category: name, total: 0 };
           catMap[name].total += Math.abs(parseFloat(tx.amount));
         });
         const topCategories = Object.values(catMap).sort((a, b) => b.total - a.total).slice(0, 5);
 
-        return ok(res, { totalSpent, avgDaily, topMerchants, topCategories, transactionCount: data.length });
+        return ok(res, { totalSpent, avgDaily, topMerchants, topCategories, transactionCount: txns.length });
       }
     }
 
