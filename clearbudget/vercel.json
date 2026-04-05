@@ -4,6 +4,6 @@
   "installCommand": "cd api && npm install --production",
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/index.js" },
-    { "source": "/(.*)", "destination": "/$1" }
+    { "source": "/((?!.*\\..*).*)", "destination": "/index.html" }
   ]
 }
