@@ -16,7 +16,9 @@ struct MainTabView: View {
         case transactions
         case accounts
         case goals
-        
+        case reports
+        case insights
+
         var title: String {
             switch self {
             case .home: return "Home"
@@ -24,9 +26,11 @@ struct MainTabView: View {
             case .transactions: return "Transactions"
             case .accounts: return "Accounts"
             case .goals: return "Goals"
+            case .reports: return "Reports"
+            case .insights: return "Insights"
             }
         }
-        
+
         var icon: String {
             switch self {
             case .home: return "house"
@@ -34,6 +38,8 @@ struct MainTabView: View {
             case .transactions: return "arrow.left.arrow.right"
             case .accounts: return "creditcard"
             case .goals: return "target"
+            case .reports: return "chart.bar"
+            case .insights: return "lightbulb"
             }
         }
     }
@@ -69,6 +75,18 @@ struct MainTabView: View {
             }
             .tabItem { Label(Tab.goals.title, systemImage: Tab.goals.icon) }
             .tag(Tab.goals)
+
+            NavigationStack {
+                ReportsView()
+            }
+            .tabItem { Label(Tab.reports.title, systemImage: Tab.reports.icon) }
+            .tag(Tab.reports)
+
+            NavigationStack {
+                InsightsView()
+            }
+            .tabItem { Label(Tab.insights.title, systemImage: Tab.insights.icon) }
+            .tag(Tab.insights)
         }
         .tint(.orange)
         .overlay(alignment: .bottom) {
