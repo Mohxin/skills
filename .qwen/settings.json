@@ -13,7 +13,24 @@
       "Bash(sh)",
       "Bash(infsh *)",
       "Bash(chmod *)",
-      "Bash(xcodebuild *)"
+      "Bash(xcodebuild *)",
+      "Bash(find *)",
+      "Bash(python3 *)",
+      "Bash(import *)",
+      "Bash(def *)",
+      "Bash(ihdr_data *)",
+      "Bash('>iibbbbb', *)",
+      "Bash(t, *)",
+      "Bash(c *)",
+      "Bash(return *)",
+      "Bash(c)",
+      "Bash(0xffffffff)[:0] *)",
+      "Bash(0xffffffff)",
+      "Bash(pass)",
+      "Bash(open)",
+      "Bash(.write)",
+      "Bash(print)",
+      "Bash(eof)"
     ]
   },
   "$version": 3

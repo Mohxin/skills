@@ -6,17 +6,17 @@
 import SwiftUI
 import Charts
 
+struct SpendingItem: Identifiable {
+    let id = UUID()
+    let category: String
+    let spent: Double
+    let budgeted: Double
+}
+
 struct ReportsView: View {
     @EnvironmentObject var currencyManager: CurrencyManager
     @State private var loading = true
     @State private var spendingData: [SpendingItem] = []
-    
-    struct SpendingItem: Identifiable {
-        let id = UUID()
-        let category: String
-        let spent: Double
-        let budgeted: Double
-    }
     
     var body: some View {
         ScrollView {

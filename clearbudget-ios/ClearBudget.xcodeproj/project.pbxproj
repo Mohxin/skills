@@ -15,6 +15,8 @@
 		697E5354CFAF72F16487F187 /* TransactionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2E6E1BFFEFB649385799FAE /* TransactionsView.swift */; };
 		6DFDAF1F1E31D1D1DA24D6DD /* BudgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3299C889310A1C3D6BF328C /* BudgetView.swift */; };
 		6F2BD4E060345D1B72331A82 /* AddTransactionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB6E47CC4D09F267BAE3609 /* AddTransactionSheet.swift */; };
+		7AFA40E30A70C274D3610158 /* ReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9B6CEDDEB3C5F5A6CF2EEBD /* ReportsView.swift */; };
+		806377477C22ABE7FAD6E0F8 /* HeroIllustrations.swift in Sources */ = {isa = PBXBuildFile; fileRef = A63BCBE3CC78A3ED871DE4C2 /* HeroIllustrations.swift */; };
 		9ACE17F1354D8621FCA3BAF1 /* AccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA6F6012B94BD01F633E27D6 /* AccountsView.swift */; };
 		AA4B2BEE53422B48038AC167 /* Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C52815C0244217C0222C69 /* Account.swift */; };
 		BB6D07CDE3A39801489AD66C /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C346308D8C2566F95A94C83 /* ThemeManager.swift */; };
@@ -39,6 +41,7 @@
 		8182392905C9C30D9CECF713 /* GoalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsView.swift; sourceTree = "<group>"; };
 		8CCD928294AD6FCB95E7EC4F /* Goal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Goal.swift; sourceTree = "<group>"; };
 		8E3FACD11CCBB8638848E753 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A63BCBE3CC78A3ED871DE4C2 /* HeroIllustrations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroIllustrations.swift; sourceTree = "<group>"; };
 		A7C52815C0244217C0222C69 /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
 		B3299C889310A1C3D6BF328C /* BudgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetView.swift; sourceTree = "<group>"; };
 		B6E0B4803609E414821349CE /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
@@ -46,6 +49,7 @@
 		D9DD2FC3DACC94E4E931286A /* Category.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Category.swift; sourceTree = "<group>"; };
 		E2004D7509D7404715115BEB /* ClearBudgetApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClearBudgetApp.swift; sourceTree = "<group>"; };
 		E2E6E1BFFEFB649385799FAE /* TransactionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionsView.swift; sourceTree = "<group>"; };
+		E9B6CEDDEB3C5F5A6CF2EEBD /* ReportsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -57,6 +61,7 @@
 				4C92942CDD1AFD56A218D8D2 /* Budget */,
 				16B73A3EE9091F4C671E0A7A /* Dashboard */,
 				29642B45B93E00BD85AFC54D /* Goals */,
+				4E991A2F58AD592BEDCCB5B3 /* Reports */,
 				9C4B21600B055795D04DC3B9 /* Transactions */,
 			);
 			path = Views;
@@ -66,6 +71,7 @@
 			isa = PBXGroup;
 			children = (
 				7C61DCE829ACB12C99FD90E8 /* DashboardView.swift */,
+				A63BCBE3CC78A3ED871DE4C2 /* HeroIllustrations.swift */,
 			);
 			path = Dashboard;
 			sourceTree = "<group>";
@@ -93,6 +99,14 @@
 				B3299C889310A1C3D6BF328C /* BudgetView.swift */,
 			);
 			path = Budget;
+			sourceTree = "<group>";
+		};
+		4E991A2F58AD592BEDCCB5B3 /* Reports */ = {
+			isa = PBXGroup;
+			children = (
+				E9B6CEDDEB3C5F5A6CF2EEBD /* ReportsView.swift */,
+			);
+			path = Reports;
 			sourceTree = "<group>";
 		};
 		5828151904CE7851E458AFB2 /* Products */ = {
@@ -242,7 +256,9 @@
 				EC3BAE3EB5E720DC72BE5747 /* DashboardView.swift in Sources */,
 				C4B4527708F2C29E46E8670B /* Goal.swift in Sources */,
 				F2736B888C2A9F6CD93DE120 /* GoalsView.swift in Sources */,
+				806377477C22ABE7FAD6E0F8 /* HeroIllustrations.swift in Sources */,
 				676754D2CFD7CC8ADBA67025 /* MainTabView.swift in Sources */,
+				7AFA40E30A70C274D3610158 /* ReportsView.swift in Sources */,
 				0DA7D58F769D39163735BA1D /* SeedDataService.swift in Sources */,
 				C3FF0B4C63B2BBA39933D4BB /* SupabaseService.swift in Sources */,
 				BB6D07CDE3A39801489AD66C /* ThemeManager.swift in Sources */,
