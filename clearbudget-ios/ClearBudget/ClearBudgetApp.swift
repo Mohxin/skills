@@ -35,6 +35,9 @@ struct ClearBudgetApp: App {
                 .environmentObject(themeManager)
                 .environmentObject(currencyManager)
                 .preferredColorScheme(themeManager.isDark ? .dark : .light)
+                .task {
+                    await SeedDataService.seedIfEmpty(container: sharedModelContainer)
+                }
         }
         .modelContainer(sharedModelContainer)
     }
