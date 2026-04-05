@@ -4,7 +4,6 @@ import Modal from '../components/Modal';
 import { SkeletonCard } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import { useCurrency } from '../context/CurrencyContext';
-import { TargetIllustration } from '../components/Illustrations';
 
 function Goals() {
   const { formatCurrency } = useCurrency();
@@ -106,8 +105,10 @@ function Goals() {
 
       {goals.length === 0 ? (
         <div className="card text-center py-20">
-          <TargetIllustration />
-          <h3 className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa] mt-2">No goals yet</h3>
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 flex items-center justify-center">
+            <svg className="w-8 h-8 text-neutral-300 dark:text-neutral-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>
+          </div>
+          <h3 className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa]">No goals yet</h3>
           <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">Create your first savings goal.</p>
           <button className="btn-primary mt-4 text-[12px] px-3 py-[7px]" onClick={() => openModal()}>Create Goal</button>
         </div>

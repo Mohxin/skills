@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { getBudgetOverview, getRecentTransactions, getSpendingByCategory } from '../api';
 import { DashboardSkeleton } from '../components/Skeleton';
 import { useCurrency } from '../context/CurrencyContext';
-import { WalletIllustration, ChartIllustration } from '../components/Illustrations';
 
 function useDashboardData() {
   const [data, setData] = useState({ overview: null, recentTransactions: [], spending: [], overBudget: [] });
@@ -120,20 +119,28 @@ function Dashboard() {
 
   return (
     <div className="space-y-5 stagger">
-      {/* Welcome */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-[-0.03em] text-[#09090b] dark:text-[#fafafa]">{monthLabel}</h1>
-          <p className="text-[13px] text-neutral-500 dark:text-neutral-400 mt-0.5">
-            {toBeBudgeted >= 0 ? `You have ${formatCurrency(toBeBudgeted)} ready to assign` : 'Some categories are over budget'}
-          </p>
-        </div>
-        <div className="flex gap-2 self-start">
-          <Link to="/transactions" className="btn-primary text-[12px] px-3 py-[7px]">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-            Add Transaction
-          </Link>
-          <Link to="/budget" className="btn-secondary text-[12px] px-3 py-[7px]">Review Budget</Link>
+      {/* Hero */}
+      <div className="relative overflow-hidden rounded-2xl border border-neutral-200/60 dark:border-neutral-800/60">
+        <img src="/hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-30 dark:opacity-20" aria-hidden="true" />
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 p-6 lg:p-8">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-orange-500 dark:text-orange-400 mb-1">Welcome back</p>
+            <h1 className="text-3xl lg:text-4xl font-black tracking-[-0.04em] text-[#09090b] dark:text-[#fafafa]">
+              {monthLabel}
+            </h1>
+            <p className="text-[13px] text-neutral-500 dark:text-neutral-400 mt-1 max-w-md">
+              {toBeBudgeted >= 0
+                ? `You have ${formatCurrency(toBeBudgeted)} ready to assign. Every dollar should have a job.`
+                : 'Some categories are over budget. Review and adjust to stay on track.'}
+            </p>
+          </div>
+          <div className="flex gap-2 self-start lg:self-auto">
+            <Link to="/transactions" className="btn-primary text-[12px] px-3 py-[7px]">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+              Add Transaction
+            </Link>
+            <Link to="/budget" className="btn-secondary text-[12px] px-3 py-[7px]">Review Budget</Link>
+          </div>
         </div>
       </div>
 
@@ -161,8 +168,10 @@ function Dashboard() {
             </div>
             {recentTransactions.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
-                <WalletIllustration />
-                <h3 className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa] mt-2">No transactions yet</h3>
+                <div className="w-16 h-16 mb-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-neutral-300 dark:text-neutral-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
+                </div>
+                <h3 className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa]">No transactions yet</h3>
                 <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5 max-w-[240px]">Record your first expense or income to start tracking.</p>
                 <Link to="/transactions" className="btn-primary mt-4 text-[12px] px-3 py-[7px]">Add Your First Transaction</Link>
               </div>
@@ -200,8 +209,10 @@ function Dashboard() {
             </div>
             {spending.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
-                <ChartIllustration />
-                <h3 className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa] mt-2">No spending data</h3>
+                <div className="w-16 h-16 mb-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-neutral-300 dark:text-neutral-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><rect x="3" y="12" width="4" height="8" rx="1" /><rect x="10" y="8" width="4" height="12" rx="1" /><rect x="17" y="4" width="4" height="16" rx="1" /></svg>
+                </div>
+                <h3 className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa]">No spending data</h3>
                 <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5 max-w-[200px]">Set up budgets to track progress.</p>
                 <Link to="/budget" className="btn-primary mt-4 text-[12px] px-3 py-[7px]">Set Up Budgets</Link>
               </div>

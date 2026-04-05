@@ -4,7 +4,6 @@ import Modal from '../components/Modal';
 import { SkeletonTable } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import { useCurrency } from '../context/CurrencyContext';
-import { DocumentIllustration } from '../components/Illustrations';
 
 const emptyForm = { account_id: '', category_id: '', date: new Date().toISOString().split('T')[0], payee: '', memo: '', amount: '', cleared: false, type: 'expense' };
 
@@ -119,8 +118,10 @@ function Transactions() {
       <div className="card overflow-x-auto">
         {filtered.length === 0 ? (
           <div className="text-center py-20">
-            <DocumentIllustration />
-            <h3 className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa] mt-2">No transactions found</h3>
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 flex items-center justify-center">
+              <svg className="w-8 h-8 text-neutral-300 dark:text-neutral-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="9" y1="9" x2="15" y2="15" /><line x1="15" y1="9" x2="9" y2="15" /></svg>
+            </div>
+            <h3 className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa]">No transactions found</h3>
             <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">Try adjusting your filters.</p>
           </div>
         ) : (

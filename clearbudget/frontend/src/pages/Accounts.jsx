@@ -4,7 +4,6 @@ import Modal from '../components/Modal';
 import { SkeletonCard } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import { useCurrency } from '../context/CurrencyContext';
-import { WalletIllustration } from '../components/Illustrations';
 
 const accountStyles = {
   checking: { gradient: 'from-[#09090b] to-[#27272a] dark:from-white dark:to-neutral-300' },
@@ -83,8 +82,10 @@ function Accounts() {
       {/* Grid */}
       {accounts.length === 0 ? (
         <div className="card text-center py-20">
-          <WalletIllustration />
-          <h3 className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa] mt-2">No accounts yet</h3>
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 flex items-center justify-center">
+            <svg className="w-8 h-8 text-neutral-300 dark:text-neutral-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
+          </div>
+          <h3 className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa]">No accounts yet</h3>
           <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">Add your first account to start tracking.</p>
           <button className="btn-primary mt-4 text-[12px] px-3 py-[7px]" onClick={() => openModal()}>Add Account</button>
         </div>
