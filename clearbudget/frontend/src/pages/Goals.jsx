@@ -104,13 +104,13 @@ function Goals() {
       </div>
 
       {goals.length === 0 ? (
-        <div className="card text-center py-20">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 flex items-center justify-center">
-            <svg className="w-8 h-8 text-neutral-300 dark:text-neutral-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>
+        <div className="card overflow-hidden">
+          <img src="/goals.jpg" alt="" className="w-full h-48 object-cover opacity-90 dark:opacity-70" />
+          <div className="text-center py-8 px-6">
+            <h3 className="text-[15px] font-semibold text-[#09090b] dark:text-[#fafafa]">No goals yet</h3>
+            <p className="text-[13px] text-neutral-500 dark:text-neutral-400 mt-1">Create your first savings goal and start tracking your progress.</p>
+            <button className="btn-primary mt-4 text-[12px] px-4 py-[7px]" onClick={() => openModal()}>Create Goal</button>
           </div>
-          <h3 className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa]">No goals yet</h3>
-          <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">Create your first savings goal.</p>
-          <button className="btn-primary mt-4 text-[12px] px-3 py-[7px]" onClick={() => openModal()}>Create Goal</button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

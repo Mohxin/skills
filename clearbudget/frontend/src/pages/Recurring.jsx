@@ -142,11 +142,12 @@ function Recurring() {
       <div className="card overflow-x-auto">
         <h2 className="text-sm font-semibold px-4 pt-3 text-neutral-900 dark:text-neutral-100">Upcoming</h2>
         {upcoming.length === 0 ? (
-          <div className="text-center py-12">
-            <svg className="w-10 h-10 mx-auto text-neutral-300 dark:text-neutral-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
-            </svg>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">No upcoming recurring bills</p>
+          <div className="overflow-hidden">
+            <img src="/recurring.jpg" alt="" className="w-full h-40 object-cover opacity-80 dark:opacity-60 rounded-t-xl" />
+            <div className="text-center py-8">
+              <h3 className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa]">No upcoming recurring bills</h3>
+              <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-1">Add your subscriptions and bills to stay on track.</p>
+            </div>
           </div>
         ) : (
           <table className="table" role="table" aria-label="Recurring bills">

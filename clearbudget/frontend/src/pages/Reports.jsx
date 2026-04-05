@@ -51,9 +51,14 @@ function Reports() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">Reports</h1>
-        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">Visualize your spending patterns</p>
+      {/* Header */}
+      <div className="relative overflow-hidden rounded-2xl border border-neutral-200/60 dark:border-neutral-800/60">
+        <img src="/insights.jpg" alt="" className="w-full h-32 object-cover opacity-50 dark:opacity-30" />
+        <div className="absolute inset-0 bg-gradient-to-t from-white via-white/60 to-transparent dark:from-[#09090b] dark:via-[#09090b]/60" />
+        <div className="absolute bottom-0 left-0 right-0 p-6">
+          <h1 className="text-xl font-bold text-[#09090b] dark:text-[#fafafa]">Reports</h1>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">Visualize your spending patterns</p>
+        </div>
       </div>
 
       {/* Pie chart */}
