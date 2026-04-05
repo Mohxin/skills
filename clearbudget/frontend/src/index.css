@@ -2,6 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Background patterns */
+@layer utilities {
+  .bg-dot-pattern {
+    background-image: radial-gradient(circle, currentColor 0.5px, transparent 0.5px);
+    background-size: 24px 24px;
+  }
+
+  .bg-grid-pattern {
+    background-image: linear-gradient(currentColor 0.5px, transparent 0.5px),
+                      linear-gradient(90deg, currentColor 0.5px, transparent 0.5px);
+    background-size: 32px 32px;
+  }
+
+  .bg-hero-gradient {
+    background: linear-gradient(135deg, #fef3e2 0%, #fce8c5 50%, #f9cc8a 100%);
+  }
+
+  .bg-dark-hero {
+    background: linear-gradient(135deg, #171717 0%, #262626 50%, #1f2937 100%);
+  }
+
+  .bg-sidebar-gradient {
+    background: linear-gradient(180deg, #171717 0%, #0a0a0a 100%);
+  }
+
+  .bg-card-shine {
+    background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 50%);
+  }
+}
+
 @layer base {
   *,
   *::before,
@@ -25,6 +55,22 @@
 
   html.dark body {
     @apply bg-neutral-950 text-neutral-100;
+  }
+
+  /* Main content subtle background pattern */
+  main::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.3;
+    background-image: radial-gradient(circle, #d4d4d4 0.5px, transparent 0.5px);
+    background-size: 28px 28px;
+  }
+
+  html.dark main::before {
+    opacity: 0.05;
+    background-image: radial-gradient(circle, #525252 0.5px, transparent 0.5px);
   }
 
   /* Focus styles — visible, non-intrusive */

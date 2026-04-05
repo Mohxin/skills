@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getInsights, getAccounts } from '../api';
 import { useCurrency } from '../context/CurrencyContext';
 import { SkeletonCard } from '../components/Skeleton';
+import { ChartIllustration } from '../components/Illustrations';
 
 function Insights() {
   const { formatCurrency } = useCurrency();

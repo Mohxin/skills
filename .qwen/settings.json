@@ -6,7 +6,9 @@
       "Bash(sleep *)",
       "Bash(curl *)",
       "Bash(kill *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   },
   "$version": 3

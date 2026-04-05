@@ -69,12 +69,15 @@ function App() {
                 </svg>
               </button>
 
-              <div className="flex-1" />
+              <div className="flex items-center gap-2">
+                <img src="/logo.svg" alt="" className="w-5 h-5" aria-hidden="true" />
+                <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 hidden sm:inline">ClearBudget</span>
+              </div>
 
               {/* Dark mode toggle */}
               <button
                 onClick={toggleDark}
-                className="p-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                className="p-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors ml-auto"
                 aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
               >
                 {dark ? (

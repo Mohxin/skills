@@ -96,7 +96,7 @@ function Sidebar({ open, onClose }) {
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-50 flex w-sidebar flex-col bg-neutral-900 dark:bg-neutral-950 text-white transition-transform duration-200 lg:translate-x-0 ${
+      className={`fixed inset-y-0 left-0 z-50 flex w-sidebar flex-col bg-sidebar-gradient text-white transition-transform duration-200 lg:translate-x-0 ${
         open ? 'translate-x-0' : '-translate-x-full'
       }`}
       aria-label="Main navigation"
@@ -104,11 +104,7 @@ function Sidebar({ open, onClose }) {
       {/* Logo */}
       <div className="flex items-center justify-between px-5 h-topbar border-b border-neutral-800">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-brand-500">
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
+          <img src="/logo.svg" alt="ClearBudget" className="w-7 h-7" />
           <span className="text-sm font-semibold tracking-tight">ClearBudget</span>
         </div>
         <button

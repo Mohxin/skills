@@ -4,6 +4,7 @@ import Modal from '../components/Modal';
 import { SkeletonCard } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import { useCurrency } from '../context/CurrencyContext';
+import { EmptyStateIllustration } from '../components/Illustrations';
 
 const accountTypeColors = {
   checking: { bg: 'bg-sky-50 dark:bg-sky-900/30', text: 'text-sky-600 dark:text-sky-400', border: 'border-sky-200 dark:border-sky-800' },
@@ -126,11 +127,9 @@ function Accounts() {
 
       {/* Accounts grid */}
       {accounts.length === 0 ? (
-        <div className="card text-center py-12">
-          <svg className="w-10 h-10 mx-auto text-neutral-300 dark:text-neutral-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
-          </svg>
-          <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">No accounts yet</h3>
+        <div className="card text-center py-16">
+          <EmptyStateIllustration />
+          <h3 className="mt-4 text-sm font-medium text-neutral-900 dark:text-neutral-100">No accounts yet</h3>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Add your first account to start tracking.</p>
           <button className="btn-primary mt-4" onClick={() => openModal()}>Add Account</button>
         </div>
