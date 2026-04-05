@@ -12,25 +12,28 @@ struct AddTransactionSheet: View {
     @Query(sort: \Account.name) private var accounts: [Account]
     @Query(sort: \Category.name) private var categories: [Category]
     @EnvironmentObject var currencyManager: CurrencyManager
-    
+
     @State private var transactionTypeRaw: String = "expense"
-    @State private var selectedAccountId: UUID?
-    @State private var selectedCategoryId: UUID?
+    @State private var selectedAccountIndex: Int = 0
+    @State private var selectedCategoryIndex: Int = 0
     @State private var date = Date.now
     @State private var payee = ""
     @State private var memo = ""
     @State private var amount = ""
     @State private var cleared = false
     @State private var saving = false
-
+    
     var transactionType: TransactionType {
         TransactionType(rawValue: transactionTypeRaw) ?? .expense
+    }
+    
+    var categoryNames: [String] {
+        ["None"] + categories.map(\.name)
     }
 
     var body: some View {
         NavigationStack {
             Form {
-                // Type
                 Section {
                     Picker("Type", selection: $transactionTypeRaw) {
                         Text("Expense").tag("expense")
@@ -38,31 +41,25 @@ struct AddTransactionSheet: View {
                     }
                     .pickerStyle(.segmented)
                 }
-                
-                // Details
-                Section {
-                    Picker("Account", selection: $selectedAccountId) {
-                        ForEach(accounts) { account in
-                            Text(account.name).tag(account.id as UUID?)
-                        }
-                    }
-                    .pickerStyle(.menu)
 
-                    Picker("Category", selection: $selectedCategoryId) {
-                        Text("None").tag(nil as UUID?)
-                        ForEach(categories) { category in
-                            Text(category.name).tag(category.id as UUID?)
+                Section {
+                    Picker("Account", selection: $selectedAccountIndex) {
+                        ForEach(Array(accounts.enumerated()), id: \.offset) { index, account in
+                            Text(account.name).tag(index)
                         }
                     }
-                    .pickerStyle(.menu)
-                    
+
+                    Picker("Category", selection: $selectedCategoryIndex) {
+                        ForEach(Array(categoryNames.enumerated()), id: \.offset) { index, name in
+                            Text(name).tag(index)
+                        }
+                    }
+
                     TextField("Payee", text: $payee)
                     TextField("Memo", text: $memo)
-                    
                     DatePicker("Date", selection: $date, displayedComponents: .date)
                 }
-                
-                // Amount
+
                 Section("Amount") {
                     TextField("0.00", text: $amount)
                         .keyboardType(.decimalPad)
@@ -81,21 +78,24 @@ struct AddTransactionSheet: View {
                     Button("Save") {
                         Task { await save() }
                     }
-                    .disabled(amount.isEmpty || selectedAccountId == nil)
+                    .disabled(amount.isEmpty || accounts.isEmpty)
                 }
-            }
-            .onAppear {
-                selectedAccountId = accounts.first?.id
             }
         }
     }
 
     private func save() async {
-        guard let accountId = selectedAccountId,
-              let amountValue = Double(amount),
-              amountValue > 0 else { return }
+        guard let amountValue = Double(amount),
+              amountValue > 0,
+              !accounts.isEmpty,
+              selectedAccountIndex < accounts.count else { return }
 
         saving = true
+
+        let account = accounts[selectedAccountIndex]
+        let category: Category? = selectedCategoryIndex > 0 && selectedCategoryIndex <= categories.count
+            ? categories[selectedCategoryIndex - 1]
+            : nil
 
         let tx = Transaction(
             date: date,
@@ -106,35 +106,17 @@ struct AddTransactionSheet: View {
             transactionType: transactionType
         )
 
-        // Find account and category
-        if let account = accounts.first(where: { $0.id == accountId }) {
-            tx.account = account
-            account.balance += (transactionType == .expense ? -amountValue : amountValue)
-        }
+        tx.account = account
+        account.balance += (transactionType == .expense ? -amountValue : amountValue)
 
-        if let categoryId = selectedCategoryId,
-           let category = categories.first(where: { $0.id == categoryId }) {
+        if let category {
             tx.category = category
             category.activity += (transactionType == .expense ? -amountValue : amountValue)
         }
-        
+
         modelContext.insert(tx)
         try? modelContext.save()
-        
-        // Sync to Supabase
-        if let accountIndex = accounts.firstIndex(where: { $0.id == accountId }) {
-            let apiTx = TransactionCreateRequest(
-                accountId: accountIndex + 1, // Simplified mapping
-                categoryId: nil,
-                date: ISO8601DateFormatter().string(from: date),
-                payee: payee.isEmpty ? nil : payee,
-                memo: memo.isEmpty ? nil : memo,
-                amount: type == .expense ? -amountValue : amountValue,
-                cleared: cleared
-            )
-            _ = try? await SupabaseService.shared.createTransaction(apiTx)
-        }
-        
+
         saving = false
         dismiss()
     }
