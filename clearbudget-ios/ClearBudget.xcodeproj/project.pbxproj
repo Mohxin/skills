@@ -13,6 +13,7 @@
 		5FA42A0D5570F609F87917AC /* Transaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 755AF6F6C31475B0C71FCCB9 /* Transaction.swift */; };
 		676754D2CFD7CC8ADBA67025 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6E0B4803609E414821349CE /* MainTabView.swift */; };
 		697E5354CFAF72F16487F187 /* TransactionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2E6E1BFFEFB649385799FAE /* TransactionsView.swift */; };
+		6B2868F666A3271DFB8A5B15 /* InsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFC6B4638BC72FA50A693E9F /* InsightsView.swift */; };
 		6DFDAF1F1E31D1D1DA24D6DD /* BudgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3299C889310A1C3D6BF328C /* BudgetView.swift */; };
 		6F2BD4E060345D1B72331A82 /* AddTransactionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB6E47CC4D09F267BAE3609 /* AddTransactionSheet.swift */; };
 		7AFA40E30A70C274D3610158 /* ReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9B6CEDDEB3C5F5A6CF2EEBD /* ReportsView.swift */; };
@@ -47,6 +48,7 @@
 		B6E0B4803609E414821349CE /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		BA6F6012B94BD01F633E27D6 /* AccountsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountsView.swift; sourceTree = "<group>"; };
 		D9DD2FC3DACC94E4E931286A /* Category.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Category.swift; sourceTree = "<group>"; };
+		DFC6B4638BC72FA50A693E9F /* InsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsView.swift; sourceTree = "<group>"; };
 		E2004D7509D7404715115BEB /* ClearBudgetApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClearBudgetApp.swift; sourceTree = "<group>"; };
 		E2E6E1BFFEFB649385799FAE /* TransactionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionsView.swift; sourceTree = "<group>"; };
 		E9B6CEDDEB3C5F5A6CF2EEBD /* ReportsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportsView.swift; sourceTree = "<group>"; };
@@ -61,6 +63,7 @@
 				4C92942CDD1AFD56A218D8D2 /* Budget */,
 				16B73A3EE9091F4C671E0A7A /* Dashboard */,
 				29642B45B93E00BD85AFC54D /* Goals */,
+				F564A040C94C29801F7E2FF8 /* Insights */,
 				4E991A2F58AD592BEDCCB5B3 /* Reports */,
 				9C4B21600B055795D04DC3B9 /* Transactions */,
 			);
@@ -171,6 +174,14 @@
 			path = Utilities;
 			sourceTree = "<group>";
 		};
+		F564A040C94C29801F7E2FF8 /* Insights */ = {
+			isa = PBXGroup;
+			children = (
+				DFC6B4638BC72FA50A693E9F /* InsightsView.swift */,
+			);
+			path = Insights;
+			sourceTree = "<group>";
+		};
 		F9FC7465337A2D5D134F9EBA /* ClearBudget */ = {
 			isa = PBXGroup;
 			children = (
@@ -265,6 +276,7 @@
 				EC3BAE3EB5E720DC72BE5747 /* DashboardView.swift in Sources */,
 				C4B4527708F2C29E46E8670B /* Goal.swift in Sources */,
 				F2736B888C2A9F6CD93DE120 /* GoalsView.swift in Sources */,
+				6B2868F666A3271DFB8A5B15 /* InsightsView.swift in Sources */,
 				676754D2CFD7CC8ADBA67025 /* MainTabView.swift in Sources */,
 				7AFA40E30A70C274D3610158 /* ReportsView.swift in Sources */,
 				0DA7D58F769D39163735BA1D /* SeedDataService.swift in Sources */,
