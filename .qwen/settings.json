@@ -11,7 +11,9 @@
       "Bash(git commit *)",
       "Bash(which *)",
       "Bash(sh)",
-      "Bash(infsh *)"
+      "Bash(infsh *)",
+      "Bash(chmod *)",
+      "Bash(xcodebuild *)"
     ]
   },
   "$version": 3
