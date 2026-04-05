@@ -7,39 +7,34 @@ import Foundation
 import SwiftData
 
 @Model
-final class Transaction: Identifiable {
-    @Attribute(.unique) var id: UUID = UUID()
+final class Transaction {
+    @Attribute(.unique) var id: UUID
     var date: Date
     var payee: String?
     var memo: String?
     var amount: Double
     var cleared: Bool
     var transactionType: TransactionType
-    var createdAt: Date = .now
-    var updatedAt: Date = .now
+    @Attribute var createdAt: Date
+    @Attribute var updatedAt: Date
     
-    // Relationships
-    var account: Account?
-    var category: Category?
+    @Relationship var account: Account?
+    @Relationship var category: Category?
     
-    init(date: Date = .now, payee: String? = nil, memo: String? = nil, amount: Double, cleared: Bool = false, transactionType: TransactionType = .expense) {
+    init(date: Date = Date.now, payee: String? = nil, memo: String? = nil, amount: Double, cleared: Bool = false, transactionType: TransactionType = .expense) {
+        self.id = UUID()
         self.date = date
         self.payee = payee
         self.memo = memo
         self.amount = amount
         self.cleared = cleared
         self.transactionType = transactionType
+        self.createdAt = Date.now
+        self.updatedAt = Date.now
     }
 }
 
-enum TransactionType: String, Codable, CaseIterable {
+enum TransactionType: String, Codable {
     case expense
     case income
-    
-    var displayName: String {
-        switch self {
-        case .expense: return "Expense"
-        case .income: return "Income"
-        }
-    }
 }

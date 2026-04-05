@@ -7,21 +7,22 @@ import Foundation
 import SwiftData
 
 @Model
-final class Category: Identifiable {
-    @Attribute(.unique) var id: UUID = UUID()
+final class Category {
+    @Attribute(.unique) var id: UUID
     var name: String
     var budgeted: Double
     var activity: Double
-    var createdAt: Date = .now
+    @Attribute var createdAt: Date
     
-    // Relationships
     var group: CategoryGroup?
     var transactions: [Transaction] = []
     
     init(name: String, budgeted: Double = 0, activity: Double = 0) {
+        self.id = UUID()
         self.name = name
         self.budgeted = budgeted
         self.activity = activity
+        self.createdAt = Date.now
     }
     
     var available: Double {
@@ -30,17 +31,19 @@ final class Category: Identifiable {
 }
 
 @Model
-final class CategoryGroup: Identifiable {
-    @Attribute(.unique) var id: UUID = UUID()
+final class CategoryGroup {
+    @Attribute(.unique) var id: UUID
     var name: String
-    var sortOrder: Int = 0
-    var createdAt: Date = .now
+    var sortOrder: Int
+    @Attribute var createdAt: Date
     
     var categories: [Category] = []
     
     init(name: String, sortOrder: Int = 0) {
+        self.id = UUID()
         self.name = name
         self.sortOrder = sortOrder
+        self.createdAt = Date.now
     }
     
     var totalBudgeted: Double {

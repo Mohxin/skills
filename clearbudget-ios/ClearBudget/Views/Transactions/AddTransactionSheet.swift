@@ -39,16 +39,18 @@ struct AddTransactionSheet: View {
                 Section {
                     Picker("Account", selection: $selectedAccountId) {
                         ForEach(accounts) { account in
-                            Text(account.name).tag(account.id)
+                            Text(account.name).tag(account.id as UUID?)
                         }
                     }
-                    
+                    .pickerStyle(.menu)
+
                     Picker("Category", selection: $selectedCategoryId) {
                         Text("None").tag(nil as UUID?)
                         ForEach(categories) { category in
                             Text(category.name).tag(category.id as UUID?)
                         }
                     }
+                    .pickerStyle(.menu)
                     
                     TextField("Payee", text: $payee)
                     TextField("Memo", text: $memo)

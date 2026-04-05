@@ -7,22 +7,24 @@ import Foundation
 import SwiftData
 
 @Model
-final class Account: Identifiable {
-    @Attribute(.unique) var id: UUID = UUID()
+final class Account {
+    @Attribute(.unique) var id: UUID
     var name: String
-    var accountType: String  // checking, savings, creditCard, cash
+    var accountType: String
     var balance: Double
-    var createdAt: Date = .now
-    var updatedAt: Date = .now
+    @Attribute var createdAt: Date
+    @Attribute var updatedAt: Date
     
-    // Relationships
     @Relationship(deleteRule: .cascade, inverse: \Transaction.account)
     var transactions: [Transaction] = []
     
     init(name: String, accountType: String, balance: Double) {
+        self.id = UUID()
         self.name = name
         self.accountType = accountType
         self.balance = balance
+        self.createdAt = Date.now
+        self.updatedAt = Date.now
     }
     
     var typeDisplay: String {
