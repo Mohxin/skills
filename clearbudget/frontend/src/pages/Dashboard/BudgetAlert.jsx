@@ -3,34 +3,33 @@ import { Link } from 'react-router-dom';
 function BudgetAlert({ categories, formatCurrency }) {
   return (
     <div
-      className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4"
+      className="rounded-lg border border-negative-200 dark:border-negative-800 bg-negative-50 dark:bg-negative-900/20 p-3"
       role="alert"
       aria-labelledby="budget-alert-title"
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/50" aria-hidden="true">
-          <svg className="h-4 w-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-negative-100 dark:bg-negative-900/50" aria-hidden="true">
+          <svg className="h-3.5 w-3.5 text-negative-600 dark:text-negative-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
           </svg>
         </div>
-        <div className="flex-1">
-          <h3 id="budget-alert-title" className="text-sm font-semibold text-red-900 dark:text-red-200">
+        <div className="flex-1 min-w-0">
+          <h3 id="budget-alert-title" className="text-sm font-semibold text-negative-800 dark:text-negative-200">
             Over Budget
           </h3>
-          <p className="mt-0.5 text-xs text-red-700 dark:text-red-300">
+          <p className="mt-0.5 text-xs text-negative-700 dark:text-negative-300">
             {categories.length > 1
               ? `${categories.length} categories are overspending this month`
-              : `${categories[0].category} is over budget`
-            }
+              : `${categories[0].category} is over budget`}
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-2 flex flex-wrap gap-1.5">
             {categories.map((item, i) => (
               <span
                 key={i}
-                className="inline-flex items-center gap-1 rounded-full bg-red-100 dark:bg-red-900/50 px-2.5 py-0.5 text-xs font-medium text-red-800 dark:text-red-200"
+                className="inline-flex items-center gap-1 rounded-full bg-negative-100 dark:bg-negative-900/50 px-2 py-0.5 text-xs font-medium text-negative-800 dark:text-negative-200"
               >
                 {item.category}
-                <span className="text-red-600 dark:text-red-400 tabular-nums">
+                <span className="text-negative-600 dark:text-negative-400 tabular-nums">
                   {formatCurrency(item.available)}
                 </span>
               </span>
@@ -39,7 +38,7 @@ function BudgetAlert({ categories, formatCurrency }) {
         </div>
         <Link
           to="/budget"
-          className="shrink-0 text-xs font-medium text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100 underline"
+          className="shrink-0 text-xs font-medium text-negative-700 dark:text-negative-300 hover:text-negative-900 dark:hover:text-negative-100 underline"
         >
           Adjust →
         </Link>

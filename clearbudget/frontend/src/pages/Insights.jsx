@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getInsights, getSpendingByCategory, getAccounts } from '../api';
+import { getInsights, getAccounts } from '../api';
 import { useCurrency } from '../context/CurrencyContext';
 import { SkeletonCard } from '../components/Skeleton';
 
@@ -22,55 +22,57 @@ function Insights() {
   if (loading) return <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{<SkeletonCard />}{<SkeletonCard />}</div>;
 
   const totalBalance = accounts.reduce((s, a) => s + parseFloat(a.balance), 0);
-  const savingsRate = insights?.totalSpent > 0 ? ((totalBalance / (insights.totalSpent + totalBalance)) * 100).toFixed(1) : 0;
+  const totalDaysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+  const projectedMonthly = (insights?.avgDaily || 0) * totalDaysInMonth;
 
   return (
-    <div className="space-y-6 page-transition">
+    <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-surface-900 dark:text-surface-50">Spending Insights</h1>
-        <p className="text-surface-500 dark:text-surface-400 mt-1">Your financial habits this month</p>
+        <h1 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">Spending Insights</h1>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">Your financial habits this month</p>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="card text-center">
-          <p className="text-sm text-surface-500 dark:text-surface-400">Total Spent</p>
-          <p className="text-2xl font-bold text-red-600 dark:text-red-400">{formatCurrency(insights?.totalSpent || 0)}</p>
+      {/* Metrics */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="card p-4">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">Total Spent</p>
+          <p className="text-xl font-semibold tabular-nums text-negative-600 dark:text-negative-500 mt-0.5">{formatCurrency(insights?.totalSpent || 0)}</p>
         </div>
-        <div className="card text-center">
-          <p className="text-sm text-surface-500 dark:text-surface-400">Daily Average</p>
-          <p className="text-2xl font-bold text-surface-900 dark:text-surface-50">{formatCurrency(insights?.avgDaily || 0)}</p>
+        <div className="card p-4">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">Daily Average</p>
+          <p className="text-xl font-semibold tabular-nums text-neutral-900 dark:text-neutral-100 mt-0.5">{formatCurrency(insights?.avgDaily || 0)}</p>
         </div>
-        <div className="card text-center">
-          <p className="text-sm text-surface-500 dark:text-surface-400">Transactions</p>
-          <p className="text-2xl font-bold text-surface-900 dark:text-surface-50">{insights?.transactionCount || 0}</p>
+        <div className="card p-4">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">Transactions</p>
+          <p className="text-xl font-semibold tabular-nums text-neutral-900 dark:text-neutral-100 mt-0.5">{insights?.transactionCount || 0}</p>
         </div>
-        <div className="card text-center">
-          <p className="text-sm text-surface-500 dark:text-surface-400">Projected Monthly</p>
-          <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">
-            {formatCurrency((insights?.avgDaily || 0) * new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate())}
-          </p>
+        <div className="card p-4">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">Projected</p>
+          <p className="text-xl font-semibold tabular-nums text-brand-600 dark:text-brand-500 mt-0.5">{formatCurrency(projectedMonthly)}</p>
         </div>
       </div>
 
+      {/* Two column */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Top Merchants */}
         <div className="card">
-          <h2 className="text-lg font-semibold mb-4 text-surface-900 dark:text-surface-50">Top Merchants</h2>
+          <div className="card-header">
+            <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Top Merchants</h2>
+          </div>
           {!insights?.topMerchants?.length ? (
-            <p className="text-surface-400 text-center py-8">No spending data yet</p>
+            <div className="text-center py-8 text-neutral-400 text-xs">No data yet</div>
           ) : (
-            <div className="space-y-3">
+            <div className="divide-y divide-neutral-100 dark:divide-neutral-800/50">
               {insights.topMerchants.map((m, i) => (
-                <div key={i} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-surface-50 dark:hover:bg-surface-700/30 transition-colors">
+                <div key={i} className="flex items-center justify-between gap-3 px-4 py-2.5">
                   <div className="flex items-center gap-3">
-                    <span className="text-lg font-bold text-surface-300 dark:text-surface-600 w-6">{i + 1}</span>
+                    <span className="text-xs font-bold text-neutral-300 dark:text-neutral-600 w-4">{i + 1}</span>
                     <div>
-                      <p className="font-medium text-surface-900 dark:text-surface-100">{m.payee}</p>
-                      <p className="text-xs text-surface-500 dark:text-surface-400">{m.count} transactions</p>
+                      <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{m.payee}</p>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400">{m.count} transaction{m.count !== 1 ? 's' : ''}</p>
                     </div>
                   </div>
-                  <p className="font-semibold text-surface-900 dark:text-surface-100">{formatCurrency(m.total)}</p>
+                  <p className="text-sm font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">{formatCurrency(m.total)}</p>
                 </div>
               ))}
             </div>
@@ -79,24 +81,26 @@ function Insights() {
 
         {/* Top Categories */}
         <div className="card">
-          <h2 className="text-lg font-semibold mb-4 text-surface-900 dark:text-surface-50">Top Categories</h2>
+          <div className="card-header">
+            <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Top Categories</h2>
+          </div>
           {!insights?.topCategories?.length ? (
-            <p className="text-surface-400 text-center py-8">No spending data yet</p>
+            <div className="text-center py-8 text-neutral-400 text-xs">No data yet</div>
           ) : (
-            <div className="space-y-3">
+            <div className="p-4 space-y-3">
               {insights.topCategories.map((c, i) => {
                 const pct = insights.totalSpent > 0 ? (c.total / insights.totalSpent * 100).toFixed(0) : 0;
                 return (
-                  <div key={i} className="py-2">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <p className="font-medium text-surface-900 dark:text-surface-100">{c.category}</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-surface-500 dark:text-surface-400">{pct}%</span>
-                        <span className="font-semibold text-surface-900 dark:text-surface-100">{formatCurrency(c.total)}</span>
+                  <div key={i} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-neutral-900 dark:text-neutral-100">{c.category}</span>
+                      <div className="flex items-center gap-2 tabular-nums">
+                        <span className="text-neutral-500 dark:text-neutral-400">{pct}%</span>
+                        <span className="font-semibold text-neutral-900 dark:text-neutral-100">{formatCurrency(c.total)}</span>
                       </div>
                     </div>
-                    <div className="w-full bg-surface-200 dark:bg-surface-700 rounded-full h-2 overflow-hidden">
-                      <div className="h-2 rounded-full bg-primary-500 progress-bar" style={{ width: `${pct}%` }}></div>
+                    <div className="h-1 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
+                      <div className="h-full rounded-full bg-brand-500 transition-all duration-300" style={{ width: `${pct}%` }} />
                     </div>
                   </div>
                 );
@@ -106,28 +110,26 @@ function Insights() {
         </div>
       </div>
 
-      {/* Fun Stats */}
-      <div className="card bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200 dark:border-purple-800">
-        <h2 className="text-lg font-semibold mb-4 text-purple-900 dark:text-purple-300">💡 Did You Know?</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-3">
-            <p className="text-purple-800 dark:text-purple-300">
-              You spend an average of <span className="font-bold">{formatCurrency(insights?.avgDaily || 0)}</span> per day this month
+      {/* Fun stats */}
+      {insights && (
+        <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
+          <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-3">💡 Quick Facts</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <p className="text-neutral-700 dark:text-neutral-300">
+              You spend an average of <span className="font-semibold tabular-nums">{formatCurrency(insights.avgDaily)}</span> per day
             </p>
-            <p className="text-purple-800 dark:text-purple-300">
-              That's about <span className="font-bold">{formatCurrency((insights?.avgDaily || 0) * 7)}</span> per week
+            <p className="text-neutral-700 dark:text-neutral-300">
+              That's about <span className="font-semibold tabular-nums">{formatCurrency(insights.avgDaily * 7)}</span> per week
             </p>
-          </div>
-          <div className="space-y-3">
-            <p className="text-purple-800 dark:text-purple-300">
-              Your top merchant is <span className="font-bold">{insights?.topMerchants?.[0]?.payee || '—'}</span> at {formatCurrency(insights?.topMerchants?.[0]?.total || 0)}
+            <p className="text-neutral-700 dark:text-neutral-300">
+              Top merchant is <span className="font-semibold">{insights.topMerchants?.[0]?.payee || '—'}</span>
             </p>
-            <p className="text-purple-800 dark:text-purple-300">
-              You've made <span className="font-bold">{insights?.transactionCount || 0}</span> transactions this month
+            <p className="text-neutral-700 dark:text-neutral-300">
+              <span className="font-semibold tabular-nums">{insights.transactionCount}</span> transactions this month
             </p>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

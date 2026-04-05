@@ -28,7 +28,7 @@ function useDarkMode() {
     localStorage.setItem('darkMode', String(dark));
   }, [dark]);
 
-  const toggle = useCallback(() => setDark(d => !d), []);
+  const toggle = useCallback(() => setDark((d) => !d), []);
   return [dark, toggle];
 }
 
@@ -44,71 +44,68 @@ function App() {
   return (
     <CurrencyProvider>
       <ToastProvider>
-        <div className="min-h-screen flex bg-surface-50 dark:bg-surface-900">
-        {/* Mobile sidebar overlay */}
-        {sidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-        
-        <Sidebar 
-          open={sidebarOpen} 
-          onClose={() => setSidebarOpen(false)} 
-          dark={dark}
-          toggleDark={toggleDark}
-        />
-        
-        <main className="flex-1 lg:ml-64">
-          {/* Top bar */}
-          <header className="sticky top-0 z-30 bg-white/80 dark:bg-surface-900/80 backdrop-blur-lg border-b border-surface-200 dark:border-surface-700">
-            <div className="flex items-center justify-between px-4 lg:px-8 py-4">
+        <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
+          {/* Mobile overlay */}
+          {sidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+
+          <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+          {/* Main content area */}
+          <div className="lg:pl-sidebar">
+            {/* Top bar */}
+            <header className="sticky top-0 z-30 flex items-center h-topbar px-4 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
               <button
-                className="lg:hidden p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
+                className="lg:hidden p-1.5 -ml-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors mr-3"
                 onClick={() => setSidebarOpen(true)}
-                aria-label="Open navigation menu"
+                aria-label="Open sidebar"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                <svg className="w-5 h-5 text-neutral-600 dark:text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                 </svg>
               </button>
-              <div className="flex items-center gap-3 ml-auto">
-                <button
-                  onClick={toggleDark}
-                  className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
-                  aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-                >
-                  {dark ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-          </header>
 
-          <div className="p-4 lg:p-8">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/transactions" element={<Transactions />} />
-              <Route path="/budget" element={<Budget />} />
-              <Route path="/recurring" element={<Recurring />} />
-              <Route path="/accounts" element={<Accounts />} />
-              <Route path="/goals" element={<Goals />} />
-              <Route path="/insights" element={<Insights />} />
-              <Route path="/reports" element={<Reports />} />
-            </Routes>
+              <div className="flex-1" />
+
+              {/* Dark mode toggle */}
+              <button
+                onClick={toggleDark}
+                className="p-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                {dark ? (
+                  <svg className="w-4 h-4 text-neutral-500 dark:text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+                  </svg>
+                )}
+              </button>
+            </header>
+
+            {/* Page content */}
+            <main className="p-4 lg:p-6 max-w-screen-2xl">
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/transactions" element={<Transactions />} />
+                <Route path="/budget" element={<Budget />} />
+                <Route path="/recurring" element={<Recurring />} />
+                <Route path="/accounts" element={<Accounts />} />
+                <Route path="/goals" element={<Goals />} />
+                <Route path="/insights" element={<Insights />} />
+                <Route path="/reports" element={<Reports />} />
+              </Routes>
+            </main>
           </div>
-        </main>
-      </div>
-    </ToastProvider>
-  </CurrencyProvider>
+        </div>
+      </ToastProvider>
+    </CurrencyProvider>
   );
 }
 

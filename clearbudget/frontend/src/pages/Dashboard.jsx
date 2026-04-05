@@ -27,23 +27,16 @@ function useDashboardData() {
     ])
       .then(([overviewRes, transactionsRes, spendingRes]) => {
         if (controller.signal.aborted) return;
-        const over = spendingRes.data.filter(item => parseFloat(item.available) < 0);
+        const over = spendingRes.data.filter((item) => parseFloat(item.available) < 0);
         setData({
           overview: overviewRes.data,
-          recentTransactions: transactionsRes.data.map(tx => ({
-            ...tx,
-            amount_formatted: new Intl.NumberFormat('en-US', {
-              style: 'currency',
-              currency: 'USD',
-              minimumFractionDigits: 2,
-            }).format(Math.abs(tx.amount)),
-          })),
+          recentTransactions: transactionsRes.data,
           spending: spendingRes.data.slice(0, 5),
           overBudget: over,
         });
         setLoading(false);
       })
-      .catch(err => {
+      .catch((err) => {
         if (controller.signal.aborted) return;
         setError(err);
         setLoading(false);
@@ -61,80 +54,61 @@ function DashboardContent({ overview, recentTransactions, spending, overBudget }
   const totalBudgeted = overview?.total_budgeted ?? 0;
   const spentThisMonth = overview?.total_activity ?? 0;
 
+  const monthLabel = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
   return (
-    <div className="space-y-8 page-transition">
-      {/* Header */}
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6 animate-fade-in">
+      {/* Page header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-surface-50">Dashboard</h1>
-          <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">
-            {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          <h1 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">
+            {monthLabel}
+          </h1>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+            {toBeBudgeted >= 0
+              ? 'You\'re on track this month'
+              : 'Some categories are over budget'}
           </p>
         </div>
-        <Link to="/transactions" className="btn-primary inline-flex items-center gap-2 self-start">
+        <Link to="/transactions" className="btn-primary self-start">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Quick Add
+          Add Transaction
         </Link>
-      </header>
+      </div>
 
       {/* Budget Alert */}
       {overBudget.length > 0 && (
-        <BudgetAlert
-          categories={overBudget}
-          formatCurrency={formatCurrency}
-        />
+        <BudgetAlert categories={overBudget} formatCurrency={formatCurrency} />
       )}
 
       {/* Stats */}
-      <section aria-label="Financial summary">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
-          <StatCard
-            label="Total Balance"
-            value={formatCurrency(totalBalance)}
-            variant={totalBalance >= 0 ? 'default' : 'negative'}
-            icon={
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
-            }
-          />
-          <StatCard
-            label="To Be Budgeted"
-            value={formatCurrency(toBeBudgeted)}
-            variant={toBeBudgeted >= 0 ? 'positive' : 'negative'}
-            icon={
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              </svg>
-            }
-          />
-          <StatCard
-            label="Budgeted"
-            value={formatCurrency(totalBudgeted)}
-            variant="default"
-            icon={
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            }
-          />
-          <StatCard
-            label="Spent This Month"
-            value={formatCurrency(Math.abs(spentThisMonth))}
-            variant="negative"
-            icon={
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
-              </svg>
-            }
-          />
-        </div>
+      <section aria-label="Financial summary" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard
+          label="Ready to Assign"
+          value={formatCurrency(toBeBudgeted)}
+          variant={toBeBudgeted >= 0 ? 'positive' : 'negative'}
+        />
+        <StatCard
+          label="Total Balance"
+          value={formatCurrency(totalBalance)}
+          variant="default"
+        />
+        <StatCard
+          label="Budgeted"
+          value={formatCurrency(totalBudgeted)}
+          variant="default"
+        />
+        <StatCard
+          label="Spent This Month"
+          value={formatCurrency(Math.abs(spentThisMonth))}
+          variant="negative"
+        />
       </section>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 stagger-children">
+      {/* Main grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TransactionList transactions={recentTransactions} />
         <CategoryProgress categories={spending} formatCurrency={formatCurrency} />
       </div>
@@ -150,12 +124,14 @@ function Dashboard() {
   if (error) {
     return (
       <div className="card text-center py-12" role="alert">
-        <svg className="w-12 h-12 mx-auto text-surface-300 dark:text-surface-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        <svg className="w-10 h-10 mx-auto text-neutral-300 dark:text-neutral-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
         </svg>
-        <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-50">Unable to load dashboard</h3>
-        <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">{error.message}</p>
-        <button className="btn-primary mt-4" onClick={() => window.location.reload()}>Try Again</button>
+        <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Unable to load dashboard</h3>
+        <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">{error.message}</p>
+        <button className="btn-primary mt-4" onClick={() => window.location.reload()}>
+          Try Again
+        </button>
       </div>
     );
   }

@@ -4,14 +4,10 @@ import { useToast } from '../components/Toast';
 import { useCurrency } from '../context/CurrencyContext';
 import { DashboardSkeleton } from '../components/Skeleton';
 
-function Budget() {
-  const { formatCurrency } = useCurrency();
-  const toast = useToast();
+function useBudgetData() {
   const [groups, setGroups] = useState([]);
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState(null);
-  const [editingAmount, setEditingAmount] = useState('');
 
   const loadData = useCallback(() => {
     Promise.all([getCategoryGroups(), getBudgetOverview()])
@@ -24,67 +20,180 @@ function Budget() {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+  return { groups, overview, loading, setGroups, setOverview, refetch: loadData };
+}
 
-  const startEditing = (category) => {
-    setEditingId(category.id);
-    setEditingAmount(category.budgeted.toString());
+function CategoryRow({ category, editingId, editingAmount, onStartEdit, onSave }) {
+  const { formatCurrency } = useCurrency();
+  const available = parseFloat(category.budgeted) + parseFloat(category.activity);
+  const isEditing = editingId === category.id;
+  const progress = parseFloat(category.budgeted) > 0
+    ? Math.min((Math.abs(parseFloat(category.activity)) / parseFloat(category.budgeted)) * 100, 100)
+    : 0;
+
+  return (
+    <div className="grid grid-cols-12 items-center py-2 px-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">
+      <div className="col-span-4">
+        <p className="text-sm text-neutral-900 dark:text-neutral-100">{category.name}</p>
+        <div className="h-0.5 w-full bg-neutral-200 dark:bg-neutral-700 rounded-full mt-1 overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-300 ${available < 0 ? 'bg-negative-500' : 'bg-brand-500'}`}
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+      <div className="col-span-3 text-right">
+        {isEditing ? (
+          <input
+            type="number"
+            step="0.01"
+            className="w-20 text-right text-sm px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+            value={editingAmount}
+            onChange={(e) => onStartEdit(category.id, e.target.value)}
+            onBlur={() => onSave(category.id)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onSave(category.id);
+              if (e.key === 'Escape') onStartEdit(null, '');
+            }}
+            autoFocus
+            aria-label={`Budget for ${category.name}`}
+          />
+        ) : (
+          <button
+            className="text-sm text-neutral-700 dark:text-neutral-300 hover:text-brand-500 dark:hover:text-brand-400 transition-colors tabular-nums"
+            onClick={() => onStartEdit(category.id, category.budgeted.toString())}
+          >
+            {formatCurrency(category.budgeted)}
+          </button>
+        )}
+      </div>
+      <div className="col-span-3 text-right text-sm tabular-nums text-negative-600 dark:text-negative-500">
+        {formatCurrency(category.activity)}
+      </div>
+      <div className={`col-span-2 text-right text-sm font-semibold tabular-nums ${available >= 0 ? 'text-positive-600 dark:text-positive-500' : 'text-negative-600 dark:text-negative-500'}`}>
+        {formatCurrency(available)}
+      </div>
+    </div>
+  );
+}
+
+function CategoryGroupCard({ group, editingId, editingAmount, onStartEdit, onSave }) {
+  const { formatCurrency } = useCurrency();
+  const [collapsed, setCollapsed] = useState(false);
+  const groupBudgeted = group.categories.reduce((s, c) => s + parseFloat(c.budgeted), 0);
+  const groupActivity = group.categories.reduce((s, c) => s + parseFloat(c.activity), 0);
+  const groupAvailable = groupBudgeted + groupActivity;
+
+  return (
+    <div className="card overflow-hidden">
+      {/* Group header */}
+      <button
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors"
+        onClick={() => setCollapsed(!collapsed)}
+        aria-expanded={!collapsed}
+      >
+        <div className="flex items-center gap-2">
+          <svg className={`w-3 h-3 text-neutral-400 transition-transform ${collapsed ? '' : 'rotate-90'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{group.name}</h2>
+        </div>
+        <div className="flex items-center gap-4 text-xs tabular-nums">
+          <span className="text-neutral-500 dark:text-neutral-400">
+            Budgeted: <span className="font-medium text-neutral-700 dark:text-neutral-300">{formatCurrency(groupBudgeted)}</span>
+          </span>
+          <span className={groupAvailable >= 0 ? 'text-positive-600 dark:text-positive-500' : 'text-negative-600 dark:text-negative-500'}>
+            Available: <span className="font-semibold">{formatCurrency(groupAvailable)}</span>
+          </span>
+        </div>
+      </button>
+
+      {/* Categories */}
+      {!collapsed && (
+        <div className="border-t border-neutral-200 dark:border-neutral-800">
+          {/* Column headers */}
+          <div className="grid grid-cols-12 px-3 py-1.5 bg-neutral-50 dark:bg-neutral-900/50 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+            <div className="col-span-4">Category</div>
+            <div className="col-span-3 text-right">Budgeted</div>
+            <div className="col-span-3 text-right">Activity</div>
+            <div className="col-span-2 text-right">Available</div>
+          </div>
+
+          {/* Category rows */}
+          <div className="divide-y divide-neutral-100 dark:divide-neutral-800/50">
+            {group.categories.map((cat) => (
+              <CategoryRow
+                key={cat.id}
+                category={cat}
+                editingId={editingId}
+                editingAmount={editingAmount}
+                onStartEdit={onStartEdit}
+                onSave={onSave}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Budget() {
+  const { formatCurrency } = useCurrency();
+  const toast = useToast();
+  const { groups, overview, loading, setGroups, setOverview, refetch } = useBudgetData();
+  const [editingId, setEditingId] = useState(null);
+  const [editingAmount, setEditingAmount] = useState('');
+
+  const handleStartEdit = (id, amount) => {
+    setEditingId(id);
+    setEditingAmount(amount);
   };
 
-  const saveBudget = async (categoryId) => {
+  const handleSave = async (categoryId) => {
     try {
       await updateCategoryBudget(categoryId, { budgeted: parseFloat(editingAmount) });
-      const [groupsRes, overviewRes] = await Promise.all([getCategoryGroups(), getBudgetOverview()]);
-      setGroups(groupsRes.data);
-      setOverview(overviewRes.data);
+      await refetch();
       toast('Budget updated', 'success');
-    } catch (err) {
+    } catch {
       toast('Failed to update budget', 'error');
     }
     setEditingId(null);
+    setEditingAmount('');
   };
 
   if (loading) return <DashboardSkeleton />;
 
   return (
-    <div className="space-y-6 page-transition">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-surface-50">Budget</h1>
-          <p className="text-surface-500 dark:text-surface-400 mt-1">Give every dollar a job</p>
-        </div>
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div>
+        <h1 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">Budget</h1>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+          Give every dollar a job — tap a budgeted amount to edit
+        </p>
       </div>
 
-      {/* Budget Summary */}
+      {/* Summary */}
       {overview && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 stagger-children">
-          <div className={`card ${overview.to_be_budgeted >= 0 ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800' : 'bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border-red-200 dark:border-red-800'}`}>
-            <div className="flex items-center gap-2 mb-2">
-              <svg className={`w-5 h-5 ${overview.to_be_budgeted >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              </svg>
-              <p className={`text-sm font-medium ${overview.to_be_budgeted >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>To Be Budgeted</p>
-            </div>
-            <p className={`text-3xl font-bold ${overview.to_be_budgeted >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+        <div className="grid grid-cols-3 gap-3">
+          <div className={`rounded-lg px-4 py-3 ${overview.to_be_budgeted >= 0 ? 'bg-positive-50 dark:bg-positive-900/20 border border-positive-200 dark:border-positive-800' : 'bg-negative-50 dark:bg-negative-900/20 border border-negative-200 dark:border-negative-800'}`}>
+            <p className={`text-xs font-medium ${overview.to_be_budgeted >= 0 ? 'text-positive-700 dark:text-positive-400' : 'text-negative-700 dark:text-negative-400'}`}>
+              Ready to Assign
+            </p>
+            <p className={`text-xl font-semibold tabular-nums mt-0.5 ${overview.to_be_budgeted >= 0 ? 'text-positive-600 dark:text-positive-500' : 'text-negative-600 dark:text-negative-500'}`}>
               {formatCurrency(overview.to_be_budgeted)}
             </p>
           </div>
-          <div className="card">
-            <div className="flex items-center gap-2 mb-2">
-              <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-sm font-medium text-surface-500 dark:text-surface-400">Total Budgeted</p>
-            </div>
-            <p className="text-3xl font-bold text-surface-900 dark:text-surface-50">{formatCurrency(overview.total_budgeted)}</p>
+          <div className="rounded-lg px-4 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+            <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Total Budgeted</p>
+            <p className="text-xl font-semibold tabular-nums mt-0.5 text-neutral-900 dark:text-neutral-100">
+              {formatCurrency(overview.total_budgeted)}
+            </p>
           </div>
-          <div className="card">
-            <div className="flex items-center gap-2 mb-2">
-              <svg className={`w-5 h-5 ${overview.available >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-              <p className="text-sm font-medium text-surface-500 dark:text-surface-400">Available to Spend</p>
-            </div>
-            <p className={`text-3xl font-bold ${overview.available >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+          <div className="rounded-lg px-4 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+            <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Available</p>
+            <p className={`text-xl font-semibold tabular-nums mt-0.5 ${overview.available >= 0 ? 'text-positive-600 dark:text-positive-500' : 'text-negative-600 dark:text-negative-500'}`}>
               {formatCurrency(overview.available)}
             </p>
           </div>
@@ -92,87 +201,18 @@ function Budget() {
       )}
 
       {/* Category Groups */}
-      {groups.map((group) => {
-        const groupBudgeted = group.categories.reduce((sum, cat) => sum + parseFloat(cat.budgeted), 0);
-        const groupActivity = group.categories.reduce((sum, cat) => sum + parseFloat(cat.activity), 0);
-        const groupAvailable = groupBudgeted + groupActivity;
-
-        return (
-          <div key={group.id} className="card">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 pb-3 border-b border-surface-200 dark:border-surface-700 gap-2">
-              <h2 className="text-lg font-semibold text-surface-900 dark:text-surface-50">{group.name}</h2>
-              <div className="flex gap-4 text-sm text-surface-500 dark:text-surface-400">
-                <span>Budgeted: <span className="font-medium text-surface-700 dark:text-surface-300">{formatCurrency(groupBudgeted)}</span></span>
-                <span>Available: <span className={`font-medium ${groupAvailable >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{formatCurrency(groupAvailable)}</span></span>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              {/* Header Row */}
-              <div className="grid grid-cols-12 gap-4 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider py-2 px-4">
-                <div className="col-span-5">Category</div>
-                <div className="col-span-2 text-right">Budgeted</div>
-                <div className="col-span-2 text-right">Activity</div>
-                <div className="col-span-3 text-right">Available</div>
-              </div>
-
-              {/* Category Rows */}
-              {group.categories.map((category) => {
-                const available = parseFloat(category.budgeted) + parseFloat(category.activity);
-                const isEditing = editingId === category.id;
-                const progress = parseFloat(category.budgeted) > 0 
-                  ? Math.min((Math.abs(parseFloat(category.activity)) / parseFloat(category.budgeted)) * 100, 100) 
-                  : 0;
-
-                return (
-                  <div 
-                    key={category.id} 
-                    className="grid grid-cols-12 gap-4 items-center py-3 px-4 rounded-lg hover:bg-surface-50 dark:hover:bg-surface-700/30 transition-colors group"
-                  >
-                    <div className="col-span-5">
-                      <p className="font-medium text-surface-900 dark:text-surface-100">{category.name}</p>
-                      <div className="w-full bg-surface-200 dark:bg-surface-700 rounded-full h-1.5 mt-1.5 overflow-hidden">
-                        <div 
-                          className={`h-1.5 rounded-full progress-bar ${available < 0 ? 'bg-red-500' : 'bg-primary-500'}`}
-                          style={{ width: `${progress}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    <div className="col-span-2 text-right">
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          step="0.01"
-                          className="input text-right w-full text-sm py-1"
-                          value={editingAmount}
-                          onChange={e => setEditingAmount(e.target.value)}
-                          onBlur={() => saveBudget(category.id)}
-                          onKeyDown={e => { if (e.key === 'Enter') saveBudget(category.id); if (e.key === 'Escape') setEditingId(null); }}
-                          autoFocus
-                          aria-label={`Budget for ${category.name}`}
-                        />
-                      ) : (
-                        <button 
-                          className="text-surface-700 dark:text-surface-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium text-sm py-1 px-2 rounded hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors"
-                          onClick={() => startEditing(category)}
-                        >
-                          {formatCurrency(category.budgeted)}
-                        </button>
-                      )}
-                    </div>
-                    <div className="col-span-2 text-right text-red-600 dark:text-red-400 font-medium text-sm">
-                      {formatCurrency(category.activity)}
-                    </div>
-                    <div className={`col-span-3 text-right font-semibold text-sm ${available >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {formatCurrency(available)}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
+      <div className="space-y-3">
+        {groups.map((group) => (
+          <CategoryGroupCard
+            key={group.id}
+            group={group}
+            editingId={editingId}
+            editingAmount={editingAmount}
+            onStartEdit={handleStartEdit}
+            onSave={handleSave}
+          />
+        ))}
+      </div>
     </div>
   );
 }

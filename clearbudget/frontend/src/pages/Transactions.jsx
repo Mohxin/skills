@@ -16,9 +16,9 @@ const emptyForm = {
   type: 'expense',
 };
 
-function exportToCSV(transactions) {
+function exportToCSV(transactions, formatCurrency) {
   const headers = ['Date', 'Payee', 'Category', 'Memo', 'Amount', 'Account', 'Cleared'];
-  const rows = transactions.map(tx => [
+  const rows = transactions.map((tx) => [
     tx.date,
     tx.payee || '',
     tx.category_name || 'Uncategorized',
@@ -27,7 +27,7 @@ function exportToCSV(transactions) {
     tx.account_name || '',
     tx.cleared ? 'Yes' : 'No',
   ]);
-  const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+  const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -88,20 +88,20 @@ function Transactions() {
     setSaving(true);
     const isExpense = formData.type === 'expense';
     const amount = isExpense ? -Math.abs(parseFloat(formData.amount)) : Math.abs(parseFloat(formData.amount));
-    
+
     try {
       if (editingTx) {
         const res = await updateTransaction(editingTx.id, { ...formData, amount });
-        setTransactions(prev => prev.map(tx => tx.id === editingTx.id ? res.data : tx));
-        toast('Transaction updated successfully', 'success');
+        setTransactions((prev) => prev.map((tx) => (tx.id === editingTx.id ? res.data : tx)));
+        toast('Transaction updated', 'success');
       } else {
         const res = await createTransaction({ ...formData, amount });
-        setTransactions(prev => [res.data, ...prev]);
-        toast('Transaction added successfully', 'success');
+        setTransactions((prev) => [res.data, ...prev]);
+        toast('Transaction added', 'success');
       }
       setShowModal(false);
     } catch (err) {
-      toast('Failed to save transaction: ' + err.message, 'error');
+      toast('Failed to save: ' + err.message, 'error');
     } finally {
       setSaving(false);
     }
@@ -111,23 +111,23 @@ function Transactions() {
     if (!confirm('Delete this transaction?')) return;
     try {
       await deleteTransaction(id);
-      setTransactions(prev => prev.filter(tx => tx.id !== id));
+      setTransactions((prev) => prev.filter((tx) => tx.id !== id));
       toast('Transaction deleted', 'info');
     } catch (err) {
       toast('Failed to delete: ' + err.message, 'error');
     }
   };
 
-  const filteredTransactions = transactions.filter(tx => {
+  const filteredTransactions = transactions.filter((tx) => {
     if (filter.account && tx.account_id !== parseInt(filter.account)) return false;
     if (filter.category && tx.category_id !== parseInt(filter.category)) return false;
     if (filter.search) {
-      const search = filter.search.toLowerCase();
-      const matches = 
-        tx.payee?.toLowerCase().includes(search) ||
-        tx.memo?.toLowerCase().includes(search) ||
-        tx.category_name?.toLowerCase().includes(search);
-      if (!matches) return false;
+      const s = filter.search.toLowerCase();
+      if (
+        !tx.payee?.toLowerCase().includes(s) &&
+        !tx.memo?.toLowerCase().includes(s) &&
+        !tx.category_name?.toLowerCase().includes(s)
+      ) return false;
     }
     return true;
   });
@@ -135,21 +135,24 @@ function Transactions() {
   if (loading) return <SkeletonTable />;
 
   return (
-    <div className="space-y-6 page-transition">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-surface-50">Transactions</h1>
-          <p className="text-surface-500 dark:text-surface-400 mt-1">{filteredTransactions.length} transactions</p>
+          <h1 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">Transactions</h1>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+            {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}
+          </p>
         </div>
-        <div className="flex gap-2">
-          <button className="btn-secondary flex items-center gap-2" onClick={() => exportToCSV(filteredTransactions)} title="Export to CSV">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        <div className="flex gap-2 self-start">
+          <button className="btn-secondary" onClick={() => exportToCSV(filteredTransactions, formatCurrency)}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
             </svg>
-            Export CSV
+            Export
           </button>
-          <button className="btn-primary flex items-center gap-2" onClick={() => openModal()}>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button className="btn-primary" onClick={() => openModal()}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             Add Transaction
@@ -159,180 +162,175 @@ function Transactions() {
 
       {/* Filters */}
       <div className="card">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="md:col-span-2">
-            <label htmlFor="search" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Search</label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="sm:col-span-2 lg:col-span-2">
+            <label htmlFor="search" className="sr-only">Search</label>
             <div className="relative">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
               </svg>
               <input
                 id="search"
                 type="text"
-                className="input pl-10"
+                className="input pl-9"
                 placeholder="Search payees, categories, memos..."
                 value={filter.search}
-                onChange={e => setFilter({ ...filter, search: e.target.value })}
+                onChange={(e) => setFilter({ ...filter, search: e.target.value })}
               />
             </div>
           </div>
           <div>
-            <label htmlFor="filter-account" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Account</label>
-            <select id="filter-account" className="input" value={filter.account} onChange={e => setFilter({ ...filter, account: e.target.value })}>
+            <label htmlFor="filter-account" className="sr-only">Filter by account</label>
+            <select id="filter-account" className="input" value={filter.account} onChange={(e) => setFilter({ ...filter, account: e.target.value })}>
               <option value="">All Accounts</option>
-              {accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
+              {accounts.map((acc) => (
+                <option key={acc.id} value={acc.id}>{acc.name}</option>
+              ))}
             </select>
           </div>
           <div>
-            <label htmlFor="filter-category" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Category</label>
-            <select id="filter-category" className="input" value={filter.category} onChange={e => setFilter({ ...filter, category: e.target.value })}>
+            <label htmlFor="filter-category" className="sr-only">Filter by category</label>
+            <select id="filter-category" className="input" value={filter.category} onChange={(e) => setFilter({ ...filter, category: e.target.value })}>
               <option value="">All Categories</option>
-              {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
             </select>
           </div>
         </div>
       </div>
 
-      {/* Transactions Table */}
-      <div className="card overflow-x-auto p-0">
-        <table className="w-full" role="table" aria-label="Transactions">
-          <thead>
-            <tr className="border-b border-surface-200 dark:border-surface-700">
-              <th scope="col" className="text-left py-3 px-4 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Date</th>
-              <th scope="col" className="text-left py-3 px-4 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Payee</th>
-              <th scope="col" className="text-left py-3 px-4 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Category</th>
-              <th scope="col" className="text-left py-3 px-4 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider hidden lg:table-cell">Memo</th>
-              <th scope="col" className="text-right py-3 px-4 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Amount</th>
-              <th scope="col" className="text-center py-3 px-4 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredTransactions.length === 0 ? (
+      {/* Table */}
+      <div className="card overflow-x-auto">
+        {filteredTransactions.length === 0 ? (
+          <div className="text-center py-12">
+            <svg className="w-10 h-10 mx-auto text-neutral-300 dark:text-neutral-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9zm3.75 11.625a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+            </svg>
+            <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">No transactions found</h3>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Try adjusting your filters or add a new transaction.</p>
+          </div>
+        ) : (
+          <table className="table" role="table" aria-label="Transactions">
+            <thead>
               <tr>
-                <td colSpan="6" className="py-12 text-center">
-                  <svg className="w-12 h-12 mx-auto text-surface-300 dark:text-surface-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <p className="text-surface-500 dark:text-surface-400 mt-2">No transactions found</p>
-                </td>
+                <th scope="col">Date</th>
+                <th scope="col">Payee</th>
+                <th scope="col" className="hidden sm:table-cell">Category</th>
+                <th scope="col" className="hidden lg:table-cell">Memo</th>
+                <th scope="col" className="text-right">Amount</th>
+                <th scope="col" className="text-center w-20">Actions</th>
               </tr>
-            ) : (
-              filteredTransactions.map((tx) => (
-                <tr key={tx.id} className="border-b border-surface-100 dark:border-surface-700/50 hover:bg-surface-50 dark:hover:bg-surface-700/30 transition-colors">
-                  <td className="py-3 px-4 text-sm text-surface-600 dark:text-surface-300">
+            </thead>
+            <tbody>
+              {filteredTransactions.map((tx) => (
+                <tr key={tx.id}>
+                  <td className="whitespace-nowrap text-xs text-neutral-600 dark:text-neutral-400 tabular-nums">
                     {new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </td>
-                  <td className="py-3 px-4 font-medium text-surface-900 dark:text-surface-100">{tx.payee || <span className="text-surface-400">—</span>}</td>
-                  <td className="py-3 px-4">
+                  <td className="font-medium text-neutral-900 dark:text-neutral-100">{tx.payee || <span className="text-neutral-400">—</span>}</td>
+                  <td className="hidden sm:table-cell">
                     {tx.category_name ? (
                       <span className="badge-positive">{tx.category_name}</span>
                     ) : (
                       <span className="badge-warning">Uncategorized</span>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-surface-500 dark:text-surface-400 text-sm hidden lg:table-cell max-w-[200px] truncate">{tx.memo || <span className="text-surface-400">—</span>}</td>
-                  <td className={`py-3 px-4 text-right font-semibold ${tx.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  <td className="hidden lg:table-cell text-neutral-500 dark:text-neutral-400 text-xs truncate max-w-[200px]">{tx.memo || <span className="text-neutral-400">—</span>}</td>
+                  <td className={`text-right font-semibold tabular-nums ${tx.amount >= 0 ? 'amount-positive' : 'amount-negative'}`}>
                     {formatCurrency(tx.amount)}
                   </td>
-                  <td className="py-3 px-4 text-center">
+                  <td className="text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <button 
-                        className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-500 hover:text-primary-600 transition-colors" 
-                        onClick={() => openModal(tx)}
-                        aria-label={`Edit transaction for ${tx.payee || 'unknown'}`}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      <button className="btn-ghost" onClick={() => openModal(tx)} aria-label={`Edit ${tx.payee || 'transaction'}`}>
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                         </svg>
                       </button>
-                      <button 
-                        className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-surface-500 hover:text-red-600 transition-colors" 
-                        onClick={() => handleDelete(tx.id)}
-                        aria-label={`Delete transaction for ${tx.payee || 'unknown'}`}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <button className="btn-ghost text-negative-500 hover:text-negative-700" onClick={() => handleDelete(tx.id)} aria-label={`Delete ${tx.payee || 'transaction'}`}>
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                         </svg>
                       </button>
                     </div>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Modal */}
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingTx ? 'Edit Transaction' : 'Add Transaction'}>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Type</label>
+            <div className="flex gap-2">
+              {['expense', 'income'].map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                    formData.type === type
+                      ? type === 'expense'
+                        ? 'bg-negative-50 dark:bg-negative-900/30 text-negative-700 dark:text-negative-400 ring-1 ring-negative-200 dark:ring-negative-800'
+                        : 'bg-positive-50 dark:bg-positive-900/30 text-positive-700 dark:text-positive-400 ring-1 ring-positive-200 dark:ring-positive-800'
+                      : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+                  }`}
+                  onClick={() => setFormData({ ...formData, type })}
+                >
+                  {type === 'expense' ? '↓ Expense' : '↑ Income'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="tx-type" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Type</label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${formData.type === 'expense' ? 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300' : 'bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-400'}`}
-                  onClick={() => setFormData({...formData, type: 'expense'})}
-                >
-                  Expense
-                </button>
-                <button
-                  type="button"
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${formData.type === 'income' ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300' : 'bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-400'}`}
-                  onClick={() => setFormData({...formData, type: 'income'})}
-                >
-                  Income
-                </button>
-              </div>
+              <label htmlFor="tx-account" className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Account</label>
+              <select id="tx-account" className="input" value={formData.account_id} onChange={(e) => setFormData({ ...formData, account_id: parseInt(e.target.value) })} required>
+                {accounts.map((acc) => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
+              </select>
             </div>
             <div>
-              <label htmlFor="tx-account" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Account</label>
-              <select id="tx-account" className="input" value={formData.account_id} onChange={e => setFormData({...formData, account_id: parseInt(e.target.value)})} required>
-                {accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
+              <label htmlFor="tx-category" className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Category</label>
+              <select id="tx-category" className="input" value={formData.category_id} onChange={(e) => setFormData({ ...formData, category_id: e.target.value ? parseInt(e.target.value) : '' })}>
+                <option value="">No Category</option>
+                {categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
               </select>
             </div>
           </div>
-          <div>
-            <label htmlFor="tx-category" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Category</label>
-            <select id="tx-category" className="input" value={formData.category_id} onChange={e => setFormData({...formData, category_id: e.target.value ? parseInt(e.target.value) : ''})}>
-              <option value="">No Category</option>
-              {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="tx-date" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Date</label>
-              <input id="tx-date" type="date" className="input" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} required />
+              <label htmlFor="tx-date" className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Date</label>
+              <input id="tx-date" type="date" className="input" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} required />
             </div>
             <div>
-              <label htmlFor="tx-amount" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Amount ($)</label>
-              <input id="tx-amount" type="number" step="0.01" min="0" className="input" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} placeholder="0.00" required />
+              <label htmlFor="tx-amount" className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Amount</label>
+              <input id="tx-amount" type="number" step="0.01" min="0" className="input" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} placeholder="0.00" required />
             </div>
           </div>
           <div>
-            <label htmlFor="tx-payee" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Payee</label>
-            <input id="tx-payee" type="text" className="input" value={formData.payee} onChange={e => setFormData({...formData, payee: e.target.value})} placeholder="e.g., Whole Foods" />
+            <label htmlFor="tx-payee" className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Payee</label>
+            <input id="tx-payee" type="text" className="input" value={formData.payee} onChange={(e) => setFormData({ ...formData, payee: e.target.value })} placeholder="e.g., Whole Foods" />
           </div>
           <div>
-            <label htmlFor="tx-memo" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Memo</label>
-            <input id="tx-memo" type="text" className="input" value={formData.memo} onChange={e => setFormData({...formData, memo: e.target.value})} placeholder="Optional note" />
+            <label htmlFor="tx-memo" className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Memo</label>
+            <input id="tx-memo" type="text" className="input" value={formData.memo} onChange={(e) => setFormData({ ...formData, memo: e.target.value })} placeholder="Optional note" />
           </div>
           <div className="flex items-center gap-2">
-            <input type="checkbox" id="tx-cleared" className="rounded border-surface-300 text-primary-600 focus:ring-primary-500" checked={formData.cleared} onChange={e => setFormData({...formData, cleared: e.target.checked})} />
-            <label htmlFor="tx-cleared" className="text-sm text-surface-700 dark:text-surface-300">Cleared</label>
+            <input type="checkbox" id="tx-cleared" className="rounded border-neutral-300 dark:border-neutral-600" checked={formData.cleared} onChange={(e) => setFormData({ ...formData, cleared: e.target.checked })} />
+            <label htmlFor="tx-cleared" className="text-xs text-neutral-700 dark:text-neutral-300">Cleared</label>
           </div>
-          <div className="flex justify-end gap-3 pt-4 border-t border-surface-200 dark:border-surface-700">
+          <div className="flex justify-end gap-3 pt-3 border-t border-neutral-200 dark:border-neutral-800">
             <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
             <button type="submit" className="btn-primary" disabled={saving}>
               {saving ? (
                 <span className="flex items-center gap-2">
-                  <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                  <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
                   Saving...
                 </span>
-              ) : (
-                editingTx ? 'Update' : 'Add'
-              )}
+              ) : editingTx ? 'Update' : 'Add'}
             </button>
           </div>
         </form>

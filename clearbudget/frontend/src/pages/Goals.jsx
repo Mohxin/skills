@@ -15,9 +15,7 @@ function Goals() {
   const [editingGoal, setEditingGoal] = useState(null);
   const [contributeGoalId, setContributeGoalId] = useState(null);
   const [contributeAmount, setContributeAmount] = useState('');
-  const [formData, setFormData] = useState({
-    category_id: '', name: '', target_amount: '', current_amount: '0', target_date: '',
-  });
+  const [formData, setFormData] = useState({ category_id: '', name: '', target_amount: '', current_amount: '0', target_date: '' });
   const [saving, setSaving] = useState(false);
 
   const loadData = useCallback(() => {
@@ -35,13 +33,7 @@ function Goals() {
   const openModal = (goal = null) => {
     if (goal) {
       setEditingGoal(goal);
-      setFormData({
-        category_id: goal.category_id || '',
-        name: goal.name,
-        target_amount: goal.target_amount.toString(),
-        current_amount: goal.current_amount.toString(),
-        target_date: goal.target_date?.split('T')[0] || '',
-      });
+      setFormData({ category_id: goal.category_id || '', name: goal.name, target_amount: goal.target_amount.toString(), current_amount: goal.current_amount.toString(), target_date: goal.target_date?.split('T')[0] || '' });
     } else {
       setEditingGoal(null);
       setFormData({ category_id: '', name: '', target_amount: '', current_amount: '0', target_date: '' });
@@ -54,20 +46,12 @@ function Goals() {
     setSaving(true);
     try {
       if (editingGoal) {
-        const res = await updateGoal(editingGoal.id, {
-          ...formData,
-          target_amount: parseFloat(formData.target_amount),
-          current_amount: parseFloat(formData.current_amount),
-        });
-        setGoals(prev => prev.map(g => g.id === editingGoal.id ? res.data : g));
+        const res = await updateGoal(editingGoal.id, { ...formData, target_amount: parseFloat(formData.target_amount), current_amount: parseFloat(formData.current_amount) });
+        setGoals((prev) => prev.map((g) => (g.id === editingGoal.id ? res.data : g)));
         toast('Goal updated', 'success');
       } else {
-        const res = await createGoal({
-          ...formData,
-          target_amount: parseFloat(formData.target_amount),
-          current_amount: parseFloat(formData.current_amount) || 0,
-        });
-        setGoals(prev => [...prev, res.data]);
+        const res = await createGoal({ ...formData, target_amount: parseFloat(formData.target_amount), current_amount: parseFloat(formData.current_amount) || 0 });
+        setGoals((prev) => [...prev, res.data]);
         toast('Goal created', 'success');
       }
       setShowModal(false);
@@ -82,7 +66,7 @@ function Goals() {
     if (!contributeAmount || parseFloat(contributeAmount) <= 0) return;
     try {
       const res = await contributeToGoal(goalId, { amount: parseFloat(contributeAmount) });
-      setGoals(prev => prev.map(g => g.id === goalId ? res.data : g));
+      setGoals((prev) => prev.map((g) => (g.id === goalId ? res.data : g)));
       toast(`Added ${formatCurrency(contributeAmount)} to goal`, 'success');
       setContributeGoalId(null);
       setContributeAmount('');
@@ -95,24 +79,24 @@ function Goals() {
     if (!confirm('Delete this goal?')) return;
     try {
       await deleteGoal(id);
-      setGoals(prev => prev.filter(g => g.id !== id));
+      setGoals((prev) => prev.filter((g) => g.id !== id));
       toast('Goal deleted', 'info');
     } catch (err) {
       toast('Failed to delete: ' + err.message, 'error');
     }
   };
 
-  if (loading) return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}</div>;
+  if (loading) return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}</div>;
 
   return (
-    <div className="space-y-6 page-transition">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-surface-50">Goals</h1>
-          <p className="text-surface-500 dark:text-surface-400 mt-1">Track your savings targets</p>
+          <h1 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">Goals</h1>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">{goals.length} goal{goals.length !== 1 ? 's' : ''}</p>
         </div>
-        <button className="btn-primary flex items-center gap-2" onClick={() => openModal()}>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button className="btn-primary self-start" onClick={() => openModal()}>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           Add Goal
@@ -121,152 +105,114 @@ function Goals() {
 
       {goals.length === 0 ? (
         <div className="card text-center py-12">
-          <svg className="w-16 h-16 mx-auto text-surface-300 dark:text-surface-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+          <svg className="w-10 h-10 mx-auto text-neutral-300 dark:text-neutral-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
           </svg>
-          <h3 className="mt-4 text-lg font-medium text-surface-900 dark:text-surface-100">No goals yet</h3>
-          <p className="mt-2 text-surface-500 dark:text-surface-400">Create your first savings goal to get started</p>
+          <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">No goals yet</h3>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Create your first savings goal.</p>
           <button className="btn-primary mt-4" onClick={() => openModal()}>Create Goal</button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {goals.map((goal) => {
             const progress = Math.min((parseFloat(goal.current_amount) / parseFloat(goal.target_amount)) * 100, 100);
             const remaining = parseFloat(goal.target_amount) - parseFloat(goal.current_amount);
             const isComplete = progress >= 100;
 
             return (
-              <div key={goal.id} className={`card ${isComplete ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800' : ''}`}>
-                <div className="flex items-start justify-between mb-4">
+              <div key={goal.id} className={`card p-4 ${isComplete ? 'bg-positive-50 dark:bg-positive-900/20 border-positive-200 dark:border-positive-800' : ''}`}>
+                <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h3 className="font-semibold text-lg text-surface-900 dark:text-surface-50">{goal.name}</h3>
-                    {goal.category_name && (
-                      <p className="text-sm text-surface-500 dark:text-surface-400">{goal.category_name}</p>
-                    )}
+                    <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{goal.name}</h3>
+                    {goal.category_name && <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">{goal.category_name}</p>}
                   </div>
-                  {isComplete && (
-                    <span className="badge-positive">✓ Done!</span>
-                  )}
+                  {isComplete && <span className="badge-positive">✓ Done</span>}
                 </div>
 
-                <div className="mb-4">
-                  <div className="flex items-center justify-between text-sm mb-1.5">
-                    <span className="text-surface-500 dark:text-surface-400">Progress</span>
-                    <span className="font-semibold text-surface-900 dark:text-surface-100">{progress.toFixed(0)}%</span>
+                {/* Progress */}
+                <div className="mb-3">
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-neutral-500 dark:text-neutral-400">Progress</span>
+                    <span className="font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">{progress.toFixed(0)}%</span>
                   </div>
-                  <div className="w-full bg-surface-200 dark:bg-surface-700 rounded-full h-3 overflow-hidden">
-                    <div 
-                      className={`h-3 rounded-full progress-bar ${isComplete ? 'bg-green-500' : 'bg-primary-500'}`}
-                      style={{ width: `${progress}%` }}
-                    ></div>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
+                    <div className={`h-full rounded-full transition-all duration-300 ${isComplete ? 'bg-positive-500' : 'bg-brand-500'}`} style={{ width: `${progress}%` }} />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                <div className="grid grid-cols-2 gap-3 text-xs mb-3">
                   <div>
-                    <p className="text-surface-500 dark:text-surface-400">Saved</p>
-                    <p className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(goal.current_amount)}</p>
+                    <p className="text-neutral-500 dark:text-neutral-400">Saved</p>
+                    <p className="font-semibold tabular-nums text-positive-600 dark:text-positive-500">{formatCurrency(goal.current_amount)}</p>
                   </div>
                   <div>
-                    <p className="text-surface-500 dark:text-surface-400">Target</p>
-                    <p className="font-semibold text-surface-900 dark:text-surface-100">{formatCurrency(goal.target_amount)}</p>
+                    <p className="text-neutral-500 dark:text-neutral-400">Target</p>
+                    <p className="font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">{formatCurrency(goal.target_amount)}</p>
                   </div>
                 </div>
 
                 {goal.target_date && (
-                  <p className="text-sm text-surface-500 dark:text-surface-400 mb-4 flex items-center gap-1.5">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">
                     Target: {new Date(goal.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </p>
                 )}
 
-                {/* Contribute Section */}
+                {/* Actions */}
                 {contributeGoalId === goal.id ? (
                   <div className="flex gap-2">
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      className="input"
-                      value={contributeAmount}
-                      onChange={e => setContributeAmount(e.target.value)}
-                      placeholder="Amount"
-                      autoFocus
-                    />
+                    <input type="number" step="0.01" min="0" className="input" value={contributeAmount} onChange={(e) => setContributeAmount(e.target.value)} placeholder="Amount" autoFocus />
                     <button className="btn-primary" onClick={() => handleContribute(goal.id)}>Add</button>
                     <button className="btn-secondary" onClick={() => { setContributeGoalId(null); setContributeAmount(''); }}>✕</button>
                   </div>
                 ) : (
-                  <div className="flex gap-2">
-                    <button className="btn-primary flex-1" onClick={() => setContributeGoalId(goal.id)}>
-                      + Contribute
-                    </button>
+                  <div className="flex gap-1">
+                    <button className="btn-primary flex-1 text-xs" onClick={() => setContributeGoalId(goal.id)}>+ Contribute</button>
                     <button className="btn-ghost" onClick={() => openModal(goal)} aria-label={`Edit ${goal.name}`}>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
                     </button>
-                    <button className="btn-ghost text-red-500 hover:text-red-600" onClick={() => handleDelete(goal.id)} aria-label={`Delete ${goal.name}`}>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                    <button className="btn-ghost text-negative-500 hover:text-negative-700" onClick={() => handleDelete(goal.id)} aria-label={`Delete ${goal.name}`}>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                     </button>
                   </div>
                 )}
 
-                {remaining > 0 && (
-                  <p className="text-sm text-surface-500 dark:text-surface-400 mt-3">
-                    {formatCurrency(remaining)} remaining
-                  </p>
-                )}
+                {remaining > 0 && <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">{formatCurrency(remaining)} remaining</p>}
               </div>
             );
           })}
         </div>
       )}
 
-      {/* Modal */}
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingGoal ? 'Edit Goal' : 'Create Goal'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="goal-name" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Goal Name</label>
-            <input id="goal-name" type="text" className="input" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g., Emergency Fund" required />
+            <label htmlFor="goal-name" className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Name</label>
+            <input id="goal-name" type="text" className="input" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g., Emergency Fund" required />
           </div>
           <div>
-            <label htmlFor="goal-category" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Category (optional)</label>
-            <select id="goal-category" className="input" value={formData.category_id} onChange={e => setFormData({...formData, category_id: e.target.value ? parseInt(e.target.value) : ''})}>
+            <label htmlFor="goal-category" className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Category</label>
+            <select id="goal-category" className="input" value={formData.category_id} onChange={(e) => setFormData({ ...formData, category_id: e.target.value ? parseInt(e.target.value) : '' })}>
               <option value="">No Category</option>
-              {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+              {categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="goal-target" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Target Amount ($)</label>
-              <input id="goal-target" type="number" step="0.01" className="input" value={formData.target_amount} onChange={e => setFormData({...formData, target_amount: e.target.value})} placeholder="10000" required />
+              <label htmlFor="goal-target" className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Target Amount</label>
+              <input id="goal-target" type="number" step="0.01" className="input" value={formData.target_amount} onChange={(e) => setFormData({ ...formData, target_amount: e.target.value })} placeholder="10000" required />
             </div>
             <div>
-              <label htmlFor="goal-current" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Current Amount ($)</label>
-              <input id="goal-current" type="number" step="0.01" className="input" value={formData.current_amount} onChange={e => setFormData({...formData, current_amount: e.target.value})} placeholder="0" />
+              <label htmlFor="goal-current" className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Current Amount</label>
+              <input id="goal-current" type="number" step="0.01" className="input" value={formData.current_amount} onChange={(e) => setFormData({ ...formData, current_amount: e.target.value })} placeholder="0" />
             </div>
           </div>
           <div>
-            <label htmlFor="goal-date" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Target Date</label>
-            <input id="goal-date" type="date" className="input" value={formData.target_date} onChange={e => setFormData({...formData, target_date: e.target.value})} />
+            <label htmlFor="goal-date" className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Target Date</label>
+            <input id="goal-date" type="date" className="input" value={formData.target_date} onChange={(e) => setFormData({ ...formData, target_date: e.target.value })} />
           </div>
-          <div className="flex justify-end gap-3 pt-4 border-t border-surface-200 dark:border-surface-700">
+          <div className="flex justify-end gap-3 pt-3 border-t border-neutral-200 dark:border-neutral-800">
             <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                  Saving...
-                </span>
-              ) : (
-                editingGoal ? 'Update' : 'Create'
-              )}
-            </button>
+            <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Saving...' : editingGoal ? 'Update' : 'Create'}</button>
           </div>
         </form>
       </Modal>
