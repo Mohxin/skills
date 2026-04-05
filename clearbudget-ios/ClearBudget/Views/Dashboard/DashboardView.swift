@@ -72,11 +72,17 @@ struct DashboardView: View {
     
     // MARK: - Header
     private var headerSection: some View {
-        ZStack(alignment: .bottomLeading) {
-            DashboardHeroIllustration()
-                .frame(height: 160)
-                .clipped()
-            
+        LinearGradient(
+            colors: [
+                Color(hex: "fef3e2"),
+                Color(hex: "fce8c5"),
+                Color(hex: "f9cc8a")
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .frame(height: 120)
+        .overlay(alignment: .bottomLeading) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(Date.now.formatted(date: .abbreviated, time: .omitted))
                     .font(.caption)
