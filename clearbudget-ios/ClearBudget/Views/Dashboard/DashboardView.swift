@@ -72,18 +72,24 @@ struct DashboardView: View {
     
     // MARK: - Header
     private var headerSection: some View {
-        HStack {
+        ZStack(alignment: .bottomLeading) {
+            DashboardHeroIllustration()
+                .frame(height: 160)
+                .clipped()
+            
             VStack(alignment: .leading, spacing: 4) {
                 Text(Date.now.formatted(date: .abbreviated, time: .omitted))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white)
                 Text(monthTitle)
                     .font(.title2)
                     .fontWeight(.bold)
+                    .foregroundStyle(.white)
             }
-            Spacer()
+            .padding(.bottom, 16)
+            .padding(.leading)
         }
-        .padding(.top, 8)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
     
     private var monthTitle: String {

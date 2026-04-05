@@ -3,6 +3,7 @@
 //  ClearBudget
 //
 
+import Foundation
 import SwiftData
 
 @MainActor
@@ -68,18 +69,32 @@ enum SeedDataService {
         let qualityCats = [dining, entertainment, gym, subscriptions]
         let funCats = [shopping, hobbies, travel]
         
-        immediateCats.forEach { $0.group = immediateGroup; context.insert($0) }
-        trueExpCats.forEach { $0.group = trueExpensesGroup; context.insert($0) }
-        qualityCats.forEach { $0.group = qualityGroup; context.insert($0) }
-        funCats.forEach { $0.group = funGroup; context.insert($0) }
+        for cat in immediateCats {
+            cat.group = immediateGroup
+            context.insert(cat)
+        }
+        for cat in trueExpCats {
+            cat.group = trueExpensesGroup
+            context.insert(cat)
+        }
+        for cat in qualityCats {
+            cat.group = qualityGroup
+            context.insert(cat)
+        }
+        for cat in funCats {
+            cat.group = funGroup
+            context.insert(cat)
+        }
         
         // Create transactions
         let now = Date()
+        let calendar = Calendar.current
+        
         func daysAgo(_ n: Int) -> Date {
-            Calendar.current.date(byAdding: .day, value: -n, to: now)!
+            calendar.date(byAdding: .day, value: -n, to: now) ?? now
         }
         
-        let transactions: [(Account, Category?, Date, String, String?, Double, Bool)] = [
+        let txData: [(Account, Category?, Date, String, String?, Double, Bool)] = [
             // Current month
             (checking, rent, daysAgo(1), "Property Management", "Monthly rent", -1500, true),
             (checking, groceries, daysAgo(0), "Whole Foods", "Weekly groceries", -87.43, false),
@@ -124,7 +139,7 @@ enum SeedDataService {
             (cash, transport, daysAgo(20), "Metro Card", "Monthly pass", -56, true),
         ]
         
-        for (account, category, date, payee, memo, amount, cleared) in transactions {
+        for (account, category, date, payee, memo, amount, cleared) in txData {
             let tx = Transaction(
                 date: date,
                 payee: payee,
@@ -139,10 +154,15 @@ enum SeedDataService {
         }
         
         // Create goals
-        let hawaiiGoal = Goal(name: "Hawaii Vacation 🌺", targetAmount: 5000, currentAmount: 2400, targetDate: Calendar.current.date(byAdding: .month, value: 5, to: now)!, monthlyContribution: 300)
-        let emergencyGoal = Goal(name: "Emergency Fund", targetAmount: 15000, currentAmount: 8750, targetDate: Calendar.current.date(byAdding: .month, value: 12, to: now)!, monthlyContribution: 500)
-        let carGoal = Goal(name: "New Car Down Payment 🚗", targetAmount: 8000, currentAmount: 3200, targetDate: Calendar.current.date(byAdding: .month, value: 8, to: now)!, monthlyContribution: 400)
-        let homeGoal = Goal(name: "Home Down Payment 🏠", targetAmount: 60000, currentAmount: 18500, targetDate: Calendar.current.date(byAdding: .month, value: 24, to: now)!, monthlyContribution: 1000)
+        let hawaiiDate = calendar.date(byAdding: .month, value: 5, to: now) ?? now
+        let emergencyDate = calendar.date(byAdding: .month, value: 12, to: now) ?? now
+        let carDate = calendar.date(byAdding: .month, value: 8, to: now) ?? now
+        let homeDate = calendar.date(byAdding: .month, value: 24, to: now) ?? now
+        
+        let hawaiiGoal = Goal(name: "Hawaii Vacation 🌺", targetAmount: 5000, currentAmount: 2400, targetDate: hawaiiDate, monthlyContribution: 300)
+        let emergencyGoal = Goal(name: "Emergency Fund", targetAmount: 15000, currentAmount: 8750, targetDate: emergencyDate, monthlyContribution: 500)
+        let carGoal = Goal(name: "New Car Down Payment 🚗", targetAmount: 8000, currentAmount: 3200, targetDate: carDate, monthlyContribution: 400)
+        let homeGoal = Goal(name: "Home Down Payment 🏠", targetAmount: 60000, currentAmount: 18500, targetDate: homeDate, monthlyContribution: 1000)
         
         hawaiiGoal.category = travel
         context.insert(hawaiiGoal)
@@ -152,6 +172,6 @@ enum SeedDataService {
         
         // Save
         try? context.save()
-        print("✅ Seeded \(transactions.count) transactions, 4 accounts, 17 categories, 4 goals")
+        print("✅ Seeded \(txData.count) transactions, 4 accounts, 17 categories, 4 goals")
     }
 }
