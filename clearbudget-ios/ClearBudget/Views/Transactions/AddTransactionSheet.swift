@@ -13,7 +13,7 @@ struct AddTransactionSheet: View {
     @Query(sort: \Category.name) private var categories: [Category]
     @EnvironmentObject var currencyManager: CurrencyManager
     
-    @State private var transactionType: TransactionType = .expense
+    @State private var transactionTypeRaw: String = "expense"
     @State private var selectedAccountId: UUID?
     @State private var selectedCategoryId: UUID?
     @State private var date = Date.now
@@ -23,14 +23,18 @@ struct AddTransactionSheet: View {
     @State private var cleared = false
     @State private var saving = false
 
+    var transactionType: TransactionType {
+        TransactionType(rawValue: transactionTypeRaw) ?? .expense
+    }
+
     var body: some View {
         NavigationStack {
             Form {
                 // Type
                 Section {
-                    Picker("Type", selection: $transactionType) {
-                        Text("Expense").tag(TransactionType.expense)
-                        Text("Income").tag(TransactionType.income)
+                    Picker("Type", selection: $transactionTypeRaw) {
+                        Text("Expense").tag("expense")
+                        Text("Income").tag("income")
                     }
                     .pickerStyle(.segmented)
                 }
