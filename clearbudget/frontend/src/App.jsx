@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import { ToastProvider } from './components/Toast';
 import { CurrencyProvider } from './context/CurrencyContext';
 import Sidebar from './components/Sidebar';
+import CommandPalette from './components/CommandPalette';
 import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import Budget from './pages/Budget';
@@ -38,8 +39,22 @@ const pageTitles = {
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dark, toggleDark] = useDarkMode();
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const location = useLocation();
   useEffect(() => setSidebarOpen(false), [location]);
+
+  // Global keyboard shortcut: Cmd+K / Ctrl+K
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
   const title = pageTitles[location.pathname] || '';
 
   return (
@@ -61,7 +76,11 @@ function App() {
               <div className="flex-1" />
 
               {/* Search */}
-              <button className="hidden md:flex items-center gap-2 px-3 py-1 text-[12px] text-neutral-400 dark:text-neutral-500 bg-neutral-100/60 dark:bg-neutral-800/40 rounded-lg border border-neutral-200/60 dark:border-neutral-800/60 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors" aria-label="Command palette">
+              <button
+                className="hidden md:flex items-center gap-2 px-3 py-1 text-[12px] text-neutral-400 dark:text-neutral-500 bg-neutral-100/60 dark:bg-neutral-800/40 rounded-lg border border-neutral-200/60 dark:border-neutral-800/60 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors cursor-pointer"
+                onClick={() => setPaletteOpen(true)}
+                aria-label="Open command palette"
+              >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
                 <span className="font-medium">Search...</span>
                 <kbd className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-white dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 font-mono">⌘K</kbd>
@@ -97,6 +116,9 @@ function App() {
             </main>
           </div>
         </div>
+
+        {/* Command Palette */}
+        <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} toggleDark={toggleDark} />
       </ToastProvider>
     </CurrencyProvider>
   );

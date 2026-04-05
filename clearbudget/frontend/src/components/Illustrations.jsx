@@ -1,81 +1,122 @@
-function EmptyStateIllustration() {
-  return (
-    <svg className="w-32 h-32 mx-auto text-neutral-200 dark:text-neutral-700" viewBox="0 0 128 128" fill="none" aria-hidden="true">
-      {/* Wallet */}
-      <rect x="24" y="40" width="80" height="56" rx="12" stroke="currentColor" strokeWidth="2.5"/>
-      <rect x="36" y="56" width="24" height="16" rx="4" stroke="currentColor" strokeWidth="2"/>
-      <circle cx="80" cy="64" r="4" fill="currentColor"/>
-      {/* Coins */}
-      <circle cx="32" cy="108" r="8" stroke="currentColor" strokeWidth="2"/>
-      <circle cx="56" cy="112" r="8" stroke="currentColor" strokeWidth="2"/>
-      <circle cx="80" cy="106" r="8" stroke="currentColor" strokeWidth="2"/>
-      {/* Chart arrow */}
-      <path d="M96 32l-8 8-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M104 24v12h-12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      {/* Dollar signs on coins */}
-      <text x="28" y="112" fontSize="10" fill="currentColor" textAnchor="middle">$</text>
-      <text x="52" y="116" fontSize="10" fill="currentColor" textAnchor="middle">$</text>
-      <text x="76" y="110" fontSize="10" fill="currentColor" textAnchor="middle">$</text>
-    </svg>
-  );
-}
+import { useState, useEffect } from 'react';
 
-function NoDataIllustration() {
+/* ---- Hero Illustration ---- */
+export function HeroIllustration() {
   return (
-    <svg className="w-32 h-32 mx-auto text-neutral-200 dark:text-neutral-700" viewBox="0 0 128 128" fill="none" aria-hidden="true">
-      {/* Document */}
-      <rect x="32" y="20" width="64" height="80" rx="8" stroke="currentColor" strokeWidth="2.5"/>
-      <path d="M64 20v20h32" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      {/* Lines on document */}
-      <line x1="44" y1="52" x2="72" y2="52" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      <line x1="44" y1="62" x2="80" y2="62" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      <line x1="44" y1="72" x2="64" y2="72" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      {/* Magnifying glass */}
-      <circle cx="88" cy="88" r="14" stroke="currentColor" strokeWidth="2.5"/>
-      <line x1="98" y1="98" x2="110" y2="110" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
-      {/* Question mark */}
-      <text x="88" y="93" fontSize="16" fill="currentColor" textAnchor="middle">?</text>
-    </svg>
-  );
-}
+    <svg className="w-full h-full min-h-[200px]" viewBox="0 0 600 200" fill="none" aria-hidden="true">
+      {/* Background blobs */}
+      <defs>
+        <linearGradient id="heroGrad1" x1="0" y1="0" x2="400" y2="200" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#f97316" stopOpacity="0.15" />
+          <stop offset="1" stopColor="#f59e0b" stopOpacity="0.05" />
+        </linearGradient>
+        <linearGradient id="heroGrad2" x1="200" y1="0" x2="600" y2="200" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#8b5cf6" stopOpacity="0.08" />
+          <stop offset="1" stopColor="#3b82f6" stopOpacity="0.03" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="120" cy="100" rx="200" ry="120" fill="url(#heroGrad1)" />
+      <ellipse cx="480" cy="80" rx="180" ry="100" fill="url(#heroGrad2)" />
 
-function ChartIllustration() {
-  return (
-    <svg className="w-32 h-32 mx-auto text-neutral-200 dark:text-neutral-700" viewBox="0 0 128 128" fill="none" aria-hidden="true">
       {/* Chart bars */}
-      <rect x="16" y="96" width="12" height="16" rx="2" stroke="currentColor" strokeWidth="2"/>
-      <rect x="36" y="72" width="12" height="40" rx="2" stroke="currentColor" strokeWidth="2"/>
-      <rect x="56" y="48" width="12" height="64" rx="2" stroke="currentColor" strokeWidth="2"/>
-      <rect x="76" y="32" width="12" height="80" rx="2" stroke="currentColor" strokeWidth="2"/>
+      <rect x="60" y="120" width="20" height="50" rx="4" fill="#09090b" opacity="0.06" className="dark:fill-white dark:opacity-10" />
+      <rect x="90" y="90" width="20" height="80" rx="4" fill="#09090b" opacity="0.08" className="dark:fill-white dark:opacity-12" />
+      <rect x="120" y="60" width="20" height="110" rx="4" fill="#09090b" opacity="0.12" className="dark:fill-white dark:opacity-16" />
+      <rect x="150" y="40" width="20" height="130" rx="4" fill="#09090b" opacity="0.16" className="dark:fill-white dark:opacity-20" />
+      <rect x="180" y="25" width="20" height="145" rx="4" fill="#09090b" className="dark:fill-white" />
+
       {/* Trend line */}
-      <path d="M22 90l20-20 20-16 20-12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx="22" cy="90" r="3" fill="currentColor"/>
-      <circle cx="42" cy="70" r="3" fill="currentColor"/>
-      <circle cx="62" cy="54" r="3" fill="currentColor"/>
-      <circle cx="82" cy="42" r="3" fill="currentColor"/>
-      {/* Arrow */}
-      <path d="M104 24l12-8-4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M70 115 L100 85 L130 55 L160 35 L190 20" stroke="#f97316" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="190" cy="20" r="4" fill="#f97316" />
+
+      {/* Floating cards */}
+      <rect x="300" y="30" width="120" height="60" rx="10" fill="white" stroke="#e5e5e5" strokeWidth="1" className="dark:fill-[#18181b] dark:stroke-[#27272a]" />
+      <rect x="312" y="42" width="40" height="4" rx="2" fill="#a3a3a3" />
+      <rect x="312" y="54" width="60" height="6" rx="3" fill="#09090b" className="dark:fill-white" />
+      <rect x="312" y="68" width="30" height="4" rx="2" fill="#10b981" />
+      <circle cx="400" cy="48" r="10" fill="#10b981" opacity="0.15" />
+      <path d="M396 48 L399 51 L405 44" stroke="#10b981" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+
+      <rect x="440" y="80" width="120" height="60" rx="10" fill="white" stroke="#e5e5e5" strokeWidth="1" className="dark:fill-[#18181b] dark:stroke-[#27272a]" />
+      <rect x="452" y="92" width="40" height="4" rx="2" fill="#a3a3a3" />
+      <rect x="452" y="104" width="70" height="6" rx="3" fill="#09090b" className="dark:fill-white" />
+      <rect x="452" y="118" width="40" height="4" rx="2" fill="#f97316" />
+
+      {/* Coin elements */}
+      <circle cx="280" cy="140" r="14" stroke="#f59e0b" strokeWidth="1.5" opacity="0.4" />
+      <text x="280" y="145" textAnchor="middle" fontSize="12" fill="#f59e0b" opacity="0.6">$</text>
+      <circle cx="320" cy="160" r="10" stroke="#f59e0b" strokeWidth="1.5" opacity="0.25" />
+      <text x="320" y="164" textAnchor="middle" fontSize="9" fill="#f59e0b" opacity="0.4">$</text>
+      <circle cx="250" cy="165" r="8" stroke="#f59e0b" strokeWidth="1.5" opacity="0.2" />
+      <text x="250" y="168" textAnchor="middle" fontSize="8" fill="#f59e0b" opacity="0.3">$</text>
     </svg>
   );
 }
 
-function GoalsIllustration() {
+/* ---- Empty State Wallet Illustration ---- */
+export function WalletIllustration() {
   return (
-    <svg className="w-32 h-32 mx-auto text-neutral-200 dark:text-neutral-700" viewBox="0 0 128 128" fill="none" aria-hidden="true">
-      {/* Target */}
-      <circle cx="64" cy="64" r="40" stroke="currentColor" strokeWidth="2.5"/>
-      <circle cx="64" cy="64" r="28" stroke="currentColor" strokeWidth="2"/>
-      <circle cx="64" cy="64" r="16" stroke="currentColor" strokeWidth="2"/>
-      <circle cx="64" cy="64" r="4" fill="currentColor"/>
-      {/* Arrow in bullseye */}
-      <path d="M64 64l24-40" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M90 20l-4 8 8-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      {/* Stars */}
-      <circle cx="28" cy="28" r="3" fill="currentColor"/>
-      <circle cx="100" cy="48" r="2" fill="currentColor"/>
-      <circle cx="36" cy="100" r="2.5" fill="currentColor"/>
+    <svg className="w-20 h-20 mx-auto" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+      <rect x="10" y="22" width="60" height="42" rx="10" stroke="currentColor" strokeWidth="1.5" className="text-neutral-200 dark:text-neutral-700" />
+      <rect x="22" y="34" width="16" height="10" rx="3" stroke="currentColor" strokeWidth="1.2" className="text-neutral-200 dark:text-neutral-700" />
+      <circle cx="56" cy="39" r="3" fill="currentColor" className="text-neutral-200 dark:text-neutral-700" />
+      {/* Coins */}
+      <circle cx="22" cy="72" r="6" stroke="currentColor" strokeWidth="1.2" className="text-neutral-200 dark:text-neutral-700" />
+      <circle cx="38" cy="74" r="6" stroke="currentColor" strokeWidth="1.2" className="text-neutral-200 dark:text-neutral-700" />
+      <circle cx="54" cy="71" r="6" stroke="currentColor" strokeWidth="1.2" className="text-neutral-200 dark:text-neutral-700" />
+      <text x="22" y="75" textAnchor="middle" fontSize="7" fill="currentColor" className="text-neutral-300 dark:text-neutral-600">$</text>
+      <text x="38" y="77" textAnchor="middle" fontSize="7" fill="currentColor" className="text-neutral-300 dark:text-neutral-600">$</text>
+      <text x="54" y="74" textAnchor="middle" fontSize="7" fill="currentColor" className="text-neutral-300 dark:text-neutral-600">$</text>
     </svg>
   );
 }
 
-export { EmptyStateIllustration, NoDataIllustration, ChartIllustration, GoalsIllustration };
+/* ---- Chart Illustration ---- */
+export function ChartIllustration() {
+  return (
+    <svg className="w-20 h-20 mx-auto" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+      <rect x="12" y="44" width="8" height="20" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-neutral-200 dark:text-neutral-700" />
+      <rect x="26" y="32" width="8" height="32" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-neutral-200 dark:text-neutral-700" />
+      <rect x="40" y="20" width="8" height="44" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-neutral-200 dark:text-neutral-700" />
+      <rect x="54" y="30" width="8" height="34" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-neutral-200 dark:text-neutral-700" />
+      <path d="M15 40 L30 28 L44 16 L58 26" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-neutral-300 dark:text-neutral-600" />
+      <circle cx="58" cy="26" r="2.5" fill="currentColor" className="text-neutral-300 dark:text-neutral-600" />
+    </svg>
+  );
+}
+
+/* ---- Target/Goals Illustration ---- */
+export function TargetIllustration() {
+  return (
+    <svg className="w-20 h-20 mx-auto" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+      <circle cx="40" cy="40" r="28" stroke="currentColor" strokeWidth="1.5" className="text-neutral-200 dark:text-neutral-700" />
+      <circle cx="40" cy="40" r="20" stroke="currentColor" strokeWidth="1.2" className="text-neutral-200 dark:text-neutral-700" />
+      <circle cx="40" cy="40" r="12" stroke="currentColor" strokeWidth="1" className="text-neutral-200 dark:text-neutral-700" />
+      <circle cx="40" cy="40" r="4" fill="currentColor" className="text-neutral-300 dark:text-neutral-600" />
+      {/* Arrow */}
+      <path d="M40 40 L60 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-neutral-300 dark:text-neutral-600" />
+      <path d="M62 16 L58 20 L64 20" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="text-neutral-300 dark:text-neutral-600" />
+      {/* Stars */}
+      <circle cx="18" cy="20" r="2" fill="currentColor" className="text-neutral-200 dark:text-neutral-700" />
+      <circle cx="62" cy="32" r="1.5" fill="currentColor" className="text-neutral-200 dark:text-neutral-700" />
+      <circle cx="24" cy="62" r="1.5" fill="currentColor" className="text-neutral-200 dark:text-neutral-700" />
+    </svg>
+  );
+}
+
+/* ---- Document/Search Illustration ---- */
+export function DocumentIllustration() {
+  return (
+    <svg className="w-20 h-20 mx-auto" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+      <rect x="16" y="12" width="48" height="58" rx="8" stroke="currentColor" strokeWidth="1.5" className="text-neutral-200 dark:text-neutral-700" />
+      <path d="M40 12 V28 H64" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" className="text-neutral-200 dark:text-neutral-700" />
+      <line x1="26" y1="36" x2="48" y2="36" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" className="text-neutral-200 dark:text-neutral-700" />
+      <line x1="26" y1="44" x2="52" y2="44" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" className="text-neutral-200 dark:text-neutral-700" />
+      <line x1="26" y1="52" x2="40" y2="52" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" className="text-neutral-200 dark:text-neutral-700" />
+      {/* Magnifying glass */}
+      <circle cx="58" cy="58" r="10" stroke="currentColor" strokeWidth="1.5" className="text-neutral-300 dark:text-neutral-600" />
+      <line x1="66" y1="66" x2="74" y2="74" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-neutral-300 dark:text-neutral-600" />
+      <text x="58" y="62" textAnchor="middle" fontSize="10" fill="currentColor" className="text-neutral-300 dark:text-neutral-600">?</text>
+    </svg>
+  );
+}

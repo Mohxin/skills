@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getBudgetOverview, getRecentTransactions, getSpendingByCategory } from '../api';
 import { DashboardSkeleton } from '../components/Skeleton';
 import { useCurrency } from '../context/CurrencyContext';
+import { WalletIllustration, ChartIllustration } from '../components/Illustrations';
 
 function useDashboardData() {
   const [data, setData] = useState({ overview: null, recentTransactions: [], spending: [], overBudget: [] });
@@ -27,7 +28,6 @@ function useDashboardData() {
   return { ...data, loading, error };
 }
 
-/* ---- Sparkline ---- */
 function Sparkline({ positive = true }) {
   const d = positive
     ? 'M0 16 Q4 14 8 12 T16 10 T24 6 T32 8 T40 4 T48 7 T56 2'
@@ -161,16 +161,9 @@ function Dashboard() {
             </div>
             {recentTransactions.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
-                <svg className="w-16 h-16 text-neutral-200 dark:text-neutral-800 mb-4" viewBox="0 0 64 64" fill="none">
-                  <rect x="8" y="14" width="48" height="38" rx="8" stroke="currentColor" strokeWidth="2" />
-                  <rect x="16" y="24" width="12" height="8" rx="2" stroke="currentColor" strokeWidth="1.5" />
-                  <circle cx="44" cy="28" r="2.5" fill="currentColor" />
-                  <circle cx="16" cy="58" r="4" stroke="currentColor" strokeWidth="1.5" />
-                  <circle cx="28" cy="60" r="4" stroke="currentColor" strokeWidth="1.5" />
-                  <circle cx="40" cy="57" r="4" stroke="currentColor" strokeWidth="1.5" />
-                </svg>
-                <h3 className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa]">No transactions yet</h3>
-                <p className="text-[12px] text-neutral-500 mt-0.5 max-w-[240px]">Record your first expense or income to start tracking.</p>
+                <WalletIllustration />
+                <h3 className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa] mt-2">No transactions yet</h3>
+                <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5 max-w-[240px]">Record your first expense or income to start tracking.</p>
                 <Link to="/transactions" className="btn-primary mt-4 text-[12px] px-3 py-[7px]">Add Your First Transaction</Link>
               </div>
             ) : (
@@ -207,15 +200,9 @@ function Dashboard() {
             </div>
             {spending.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
-                <svg className="w-16 h-16 text-neutral-200 dark:text-neutral-800 mb-4" viewBox="0 0 64 64" fill="none">
-                  <rect x="12" y="32" width="6" height="18" rx="1.5" stroke="currentColor" strokeWidth="2" />
-                  <rect x="22" y="22" width="6" height="28" rx="1.5" stroke="currentColor" strokeWidth="2" />
-                  <rect x="32" y="16" width="6" height="34" rx="1.5" stroke="currentColor" strokeWidth="2" />
-                  <rect x="42" y="24" width="6" height="26" rx="1.5" stroke="currentColor" strokeWidth="2" />
-                  <path d="M14 30l10-8 10-10 10-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <h3 className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa]">No spending data</h3>
-                <p className="text-[12px] text-neutral-500 mt-0.5 max-w-[200px]">Set up budgets to track progress.</p>
+                <ChartIllustration />
+                <h3 className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa] mt-2">No spending data</h3>
+                <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5 max-w-[200px]">Set up budgets to track progress.</p>
                 <Link to="/budget" className="btn-primary mt-4 text-[12px] px-3 py-[7px]">Set Up Budgets</Link>
               </div>
             ) : (
