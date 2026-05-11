@@ -367,6 +367,12 @@ function Dashboard() {
                 </Link>
                 <Link to="/budget" className="btn-secondary flex-1 text-[12px] px-3 py-[7px]">Budget</Link>
               </div>
+              <Link to="/planner" className="mt-2 flex items-center justify-between rounded-lg border border-neutral-200/70 bg-white/70 px-3 py-2 text-[12px] font-semibold text-[#09090b] transition-colors hover:bg-white dark:border-neutral-800/70 dark:bg-neutral-950/20 dark:text-[#fafafa] dark:hover:bg-neutral-900/40">
+                Open Planner
+                <svg className="h-3.5 w-3.5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+              </Link>
             </div>
           </div>
         </div>

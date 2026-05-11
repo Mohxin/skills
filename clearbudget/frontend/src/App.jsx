@@ -12,6 +12,7 @@ import Goals from './pages/Goals';
 import Reports from './pages/Reports';
 import Recurring from './pages/Recurring';
 import Insights from './pages/Insights';
+import Planner from './pages/Planner';
 
 function useDarkMode() {
   const [dark, setDark] = useState(() => {
@@ -32,6 +33,7 @@ const pageTitles = {
   '/recurring': 'Recurring Bills',
   '/accounts': 'Accounts',
   '/goals': 'Goals',
+  '/planner': 'Planner',
   '/insights': 'Insights',
   '/reports': 'Reports',
 };
@@ -110,6 +112,7 @@ function App() {
                 <Route path="/recurring" element={<Recurring />} />
                 <Route path="/accounts" element={<Accounts />} />
                 <Route path="/goals" element={<Goals />} />
+                <Route path="/planner" element={<Planner />} />
                 <Route path="/insights" element={<Insights />} />
                 <Route path="/reports" element={<Reports />} />
               </Routes>
