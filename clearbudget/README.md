@@ -69,6 +69,32 @@ cd backend && npm install && npm run db:seed
 cd frontend && npm run dev
 ```
 
+## 🔌 Use Real Data
+
+ClearBudget reads and writes to Supabase through the backend API. To use your own real data instead of the seed data:
+
+1. Create a Supabase project.
+2. Run `backend/src/db/migrate.sql` in the Supabase SQL Editor.
+3. Create `backend/.env` with:
+
+```bash
+SUPABASE_URL=your-project-url
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+4. Do not run `npm run db:seed` if you want an empty real account.
+5. Start the backend and frontend:
+
+```bash
+cd backend && npm run start
+cd ../frontend && npm run dev
+```
+
+6. Add your real accounts, categories, transactions, recurring bills, and goals from the app UI.
+
+For deployment, add the same Supabase environment variables in Vercel. The frontend uses `/api` in production, so it will talk to the deployed serverless API automatically.
+
 ## 📦 Deploy to Vercel
 
 ```bash

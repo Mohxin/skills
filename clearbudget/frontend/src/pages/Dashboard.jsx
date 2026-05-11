@@ -140,6 +140,23 @@ function InsightCard({ label, value, description, tone = 'neutral' }) {
   );
 }
 
+function BannerMetric({ label, value, helper, tone = 'neutral' }) {
+  const tones = {
+    neutral: 'text-[#09090b] dark:text-[#fafafa]',
+    good: 'text-emerald-700 dark:text-emerald-300',
+    warning: 'text-amber-700 dark:text-amber-300',
+    danger: 'text-red-700 dark:text-red-300',
+  };
+
+  return (
+    <div className="rounded-lg border border-white/60 bg-white/72 px-3 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] backdrop-blur dark:border-neutral-800/70 dark:bg-neutral-950/35">
+      <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-neutral-400 dark:text-neutral-500">{label}</p>
+      <p className={`mt-1 text-[17px] font-black leading-none tracking-[-0.04em] tabular-nums ${tones[tone]}`}>{value}</p>
+      <p className="mt-1 text-[10px] leading-snug text-neutral-500 dark:text-neutral-400">{helper}</p>
+    </div>
+  );
+}
+
 function SectionTitle({ title, action, to }) {
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-neutral-100 dark:border-neutral-800/50">
@@ -298,6 +315,24 @@ function Dashboard() {
   const nextBill = upcomingBills[0];
   const nextBillDate = nextBill?.next_due ? new Date(`${nextBill.next_due}T00:00:00`) : null;
   const nextBillDays = nextBillDate ? Math.ceil((nextBillDate - new Date()) / 86400000) : null;
+  const monthlyBills = recurring.reduce((sum, item) => {
+    const amount = Math.abs(parseFloat(item.amount) || 0);
+    if (item.frequency === 'weekly') return sum + amount * 4.33;
+    if (item.frequency === 'biweekly') return sum + amount * 2.17;
+    if (item.frequency === 'yearly') return sum + amount / 12;
+    return sum + amount;
+  }, 0);
+  const bannerStatus = overBudget.length > 0 ? 'Action needed' : toBeBudgeted > 0 ? 'Ready to assign' : 'Balanced';
+  const bannerStatusClass = overBudget.length > 0
+    ? 'border-red-200/70 bg-red-50/80 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300'
+    : toBeBudgeted > 0
+      ? 'border-orange-200/70 bg-orange-50/80 text-orange-700 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-300'
+      : 'border-emerald-200/70 bg-emerald-50/80 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300';
+  const primaryMessage = overBudget.length > 0
+    ? `${overBudget[0].category} needs attention before the plan is balanced.`
+    : toBeBudgeted > 0
+      ? `${formatCurrency(toBeBudgeted)} is waiting to be assigned.`
+      : 'Your available dollars are assigned and the plan is balanced.';
   const priorities = [
     ...(overBudget.length > 0 ? [{
       title: `Cover ${overBudget.length} overspent categor${overBudget.length === 1 ? 'y' : 'ies'}`,
@@ -332,40 +367,57 @@ function Dashboard() {
   return (
     <div className="space-y-4 page-enter">
       {/* Hero */}
-      <div className="relative overflow-hidden rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.45)]">
-        <img src="/hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-30 dark:opacity-20" aria-hidden="true" />
-        <div className="absolute inset-0 bg-gradient-to-r from-white/92 via-white/70 to-white/20 dark:from-[#09090b]/95 dark:via-[#09090b]/75 dark:to-[#09090b]/20" aria-hidden="true" />
-        <div className="relative z-10 grid gap-6 p-5 lg:grid-cols-[minmax(0,1fr)_300px] lg:p-7">
-          <div className="flex flex-col justify-between gap-7">
+      <div className="relative overflow-hidden rounded-xl border border-neutral-200/70 bg-[#f5f1ea] shadow-[0_18px_42px_-34px_rgba(15,23,42,0.45)] dark:border-neutral-800/70 dark:bg-[#0d0d0f]">
+        <img src="/hero.jpg" alt="" className="absolute inset-0 h-full w-full object-cover opacity-24 mix-blend-multiply dark:opacity-20 dark:mix-blend-normal" aria-hidden="true" />
+        <div className="absolute inset-0 bg-[linear-gradient(110deg,rgba(255,255,255,0.96)_0%,rgba(255,255,255,0.86)_46%,rgba(255,255,255,0.46)_100%)] dark:bg-[linear-gradient(110deg,rgba(9,9,11,0.98)_0%,rgba(9,9,11,0.84)_50%,rgba(9,9,11,0.48)_100%)]" aria-hidden="true" />
+        <div className="absolute -right-20 top-8 hidden h-56 w-56 rounded-full border border-orange-200/50 bg-orange-200/20 blur-3xl dark:border-orange-500/10 dark:bg-orange-500/10 lg:block" aria-hidden="true" />
+        <div className="relative z-10 grid gap-6 p-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:p-7">
+          <div className="flex flex-col justify-between gap-6">
             <div>
-              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-orange-200/70 bg-orange-50/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-orange-700 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
-                {monthLabel}
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <span className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${bannerStatusClass}`}>
+                  <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                  {bannerStatus}
+                </span>
+                <span className="rounded-full border border-neutral-200/80 bg-white/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-neutral-500 dark:border-neutral-800/70 dark:bg-neutral-950/30 dark:text-neutral-400">
+                  {monthLabel}
+                </span>
               </div>
-              <h1 className="max-w-2xl text-3xl font-black leading-tight tracking-[-0.04em] text-[#09090b] dark:text-[#fafafa] lg:text-4xl">
-                Keep the budget balanced without hunting through tabs.
+              <h1 className="max-w-2xl text-[32px] font-black leading-[0.98] tracking-[-0.045em] text-[#09090b] dark:text-[#fafafa] lg:text-[44px]">
+                Your money plan, ready at a glance.
               </h1>
-              <p className="mt-2 max-w-xl text-[13px] text-neutral-600 dark:text-neutral-300">
-                {toBeBudgeted >= 0
-                  ? `${formatCurrency(toBeBudgeted)} is ready to assign. Keep the plan tight and every dollar accounted for.`
-                  : `${formatCurrency(Math.abs(toBeBudgeted))} needs coverage before the budget is balanced.`}
+              <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-neutral-600 dark:text-neutral-300">
+                {primaryMessage} Track the next bill, assign new money, and keep spending aligned from this screen.
               </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 max-w-3xl">
-              <InsightCard label="Assigned" value={formatCurrency(totalBudgeted)} description={`${budgetUtilization.toFixed(0)}% of assigned funds used`} />
-              <InsightCard label="Available" value={formatCurrency(available)} description="Budgeted minus current activity" tone={available >= 0 ? 'good' : 'danger'} />
-              <InsightCard label="Ready" value={formatCurrency(toBeBudgeted)} description={toBeBudgeted >= 0 ? 'Waiting for a job' : 'Needs budget coverage'} tone={unassignedTone} />
+            <div className="grid max-w-3xl grid-cols-1 gap-2.5 sm:grid-cols-3">
+              <BannerMetric label="Ready" value={formatCurrency(toBeBudgeted)} helper={toBeBudgeted >= 0 ? 'Still needs a job' : 'Needs coverage'} tone={unassignedTone} />
+              <BannerMetric label="Available" value={formatCurrency(available)} helper={`${budgetUtilization.toFixed(0)}% of budget used`} tone={available >= 0 ? 'good' : 'danger'} />
+              <BannerMetric label="Bills" value={formatCurrency(monthlyBills)} helper="Estimated monthly fixed cost" />
             </div>
           </div>
           <div className="space-y-3">
             <BudgetHealth score={healthScore} status={healthStatus} statusClass={healthStatusClass} />
             <div className="surface p-3.5">
-              <p className="text-[11px] font-semibold text-[#09090b] dark:text-[#fafafa]">Quick Actions</p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold text-[#09090b] dark:text-[#fafafa]">Next Move</p>
+                  <p className="mt-1 text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">
+                    {overBudget.length > 0 ? 'Cover overspending first.' : toBeBudgeted > 0 ? 'Assign ready money now.' : 'Review activity and stay on pace.'}
+                  </p>
+                </div>
+                {nextBill && (
+                  <div className="rounded-lg bg-white/80 px-2.5 py-1.5 text-right dark:bg-neutral-950/35">
+                    <p className="max-w-[96px] truncate text-[10px] font-bold text-[#09090b] dark:text-[#fafafa]">{nextBill.payee}</p>
+                    <p className="text-[10px] text-neutral-500 dark:text-neutral-400">{nextBillDays <= 0 ? 'Due today' : `${nextBillDays}d`}</p>
+                  </div>
+                )}
+              </div>
               <div className="mt-2 flex gap-2">
                 <Link to="/transactions" className="btn-primary flex-1 text-[12px] px-3 py-[7px]">
-                  Add
+                  Add Transaction
                 </Link>
-                <Link to="/budget" className="btn-secondary flex-1 text-[12px] px-3 py-[7px]">Budget</Link>
+                <Link to="/budget" className="btn-secondary flex-1 text-[12px] px-3 py-[7px]">Assign</Link>
               </div>
               <Link to="/planner" className="mt-2 flex items-center justify-between rounded-lg border border-neutral-200/70 bg-white/70 px-3 py-2 text-[12px] font-semibold text-[#09090b] transition-colors hover:bg-white dark:border-neutral-800/70 dark:bg-neutral-950/20 dark:text-[#fafafa] dark:hover:bg-neutral-900/40">
                 Open Planner
