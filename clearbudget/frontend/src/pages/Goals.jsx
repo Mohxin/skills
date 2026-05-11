@@ -18,8 +18,9 @@ function Goals() {
   const [formData, setFormData] = useState({ category_id: '', name: '', target_amount: '', current_amount: '0', target_date: '' });
   const [saving, setSaving] = useState(false);
 
-  const loadData = useCallback(() => {
-    Promise.all([getGoals(), getCategories()])
+  const loadData = useCallback((showLoader = false) => {
+    if (showLoader) setLoading(true);
+    return Promise.all([getGoals(), getCategories()])
       .then(([goalsRes, catRes]) => {
         setGoals(goalsRes.data);
         setCategories(catRes.data);
@@ -28,7 +29,7 @@ function Goals() {
       .catch(() => setLoading(false));
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { loadData(true); }, [loadData]);
 
   const openModal = (goal = null) => {
     if (goal) {
@@ -46,14 +47,13 @@ function Goals() {
     setSaving(true);
     try {
       if (editingGoal) {
-        const res = await updateGoal(editingGoal.id, { ...formData, target_amount: parseFloat(formData.target_amount), current_amount: parseFloat(formData.current_amount) });
-        setGoals((prev) => prev.map((g) => (g.id === editingGoal.id ? res.data : g)));
+        await updateGoal(editingGoal.id, { ...formData, target_amount: parseFloat(formData.target_amount), current_amount: parseFloat(formData.current_amount) });
         toast('Goal updated', 'success');
       } else {
-        const res = await createGoal({ ...formData, target_amount: parseFloat(formData.target_amount), current_amount: parseFloat(formData.current_amount) || 0 });
-        setGoals((prev) => [...prev, res.data]);
+        await createGoal({ ...formData, target_amount: parseFloat(formData.target_amount), current_amount: parseFloat(formData.current_amount) || 0 });
         toast('Goal created', 'success');
       }
+      await loadData();
       setShowModal(false);
     } catch (err) {
       toast('Failed to save: ' + err.message, 'error');
@@ -65,8 +65,8 @@ function Goals() {
   const handleContribute = async (goalId) => {
     if (!contributeAmount || parseFloat(contributeAmount) <= 0) return;
     try {
-      const res = await contributeToGoal(goalId, { amount: parseFloat(contributeAmount) });
-      setGoals((prev) => prev.map((g) => (g.id === goalId ? res.data : g)));
+      await contributeToGoal(goalId, { amount: parseFloat(contributeAmount) });
+      await loadData();
       toast(`Added ${formatCurrency(contributeAmount)} to goal`, 'success');
       setContributeGoalId(null);
       setContributeAmount('');

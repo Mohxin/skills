@@ -33,32 +33,61 @@ router.get('/overview', async (req, res) => {
 router.get('/spending-by-category', async (req, res) => {
   try {
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().split('T')[0];
+    let reportDate = now;
 
-    const { data, error } = await supabase
-      .from('transactions')
-      .select(`
-        amount,
-        categories(name, budgeted, activity, category_groups(name))
-      `)
-      .gte('date', startOfMonth)
-      .lt('date', startOfNextMonth)
-      .lt('amount', 0);
+    const fetchMonthTransactions = async (date) => {
+      const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0];
+      const startOfNextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1).toISOString().split('T')[0];
+
+      return supabase
+        .from('transactions')
+        .select('amount, category_id')
+        .gte('date', startOfMonth)
+        .lt('date', startOfNextMonth)
+        .lt('amount', 0);
+    };
+
+    let { data, error } = await fetchMonthTransactions(reportDate);
+    if (!error && !data?.length) {
+      const { data: latest } = await supabase
+        .from('transactions')
+        .select('date')
+        .lt('amount', 0)
+        .order('date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latest?.date) {
+        reportDate = new Date(`${latest.date}T00:00:00`);
+        ({ data, error } = await fetchMonthTransactions(reportDate));
+      }
+    }
     if (error) throw new Error(error.message);
+
+    const { data: categories, error: categoryError } = await supabase
+      .from('categories')
+      .select('id, name, budgeted, activity, category_groups(name)');
+    if (categoryError) throw new Error(categoryError.message);
+
+    const categoryMap = {};
+    categories?.forEach(category => {
+      categoryMap[category.id] = category;
+    });
 
     // Group by category
     const spendingMap = {};
     data?.forEach(tx => {
-      const catId = tx.categories?.id;
-      if (!catId) return;
+      const catId = tx.category_id;
+      const category = categoryMap[catId];
+      if (!catId || !category) return;
       if (!spendingMap[catId]) {
         spendingMap[catId] = {
-          category: tx.categories?.name,
-          group_name: tx.categories?.category_groups?.name,
+          month: reportDate.toISOString().slice(0, 7),
+          category: category.name,
+          group_name: category.category_groups?.name,
           spent: 0,
-          budgeted: parseFloat(tx.categories?.budgeted || 0),
-          available: parseFloat(tx.categories?.activity || 0) + parseFloat(tx.categories?.budgeted || 0),
+          budgeted: parseFloat(category.budgeted || 0),
+          available: parseFloat(category.activity || 0) + parseFloat(category.budgeted || 0),
         };
       }
       spendingMap[catId].spent += Math.abs(parseFloat(tx.amount));

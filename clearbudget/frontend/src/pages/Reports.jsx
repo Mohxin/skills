@@ -46,6 +46,10 @@ function Reports() {
   });
   const barData = Object.values(trendsByMonth).reverse();
   const topCategories = spendingData.slice(0, 5).map((c) => c.category);
+  const reportMonth = spendingData[0]?.month;
+  const reportMonthLabel = reportMonth
+    ? new Date(`${reportMonth}-01T00:00:00`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : null;
 
   if (loading) return <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">{<SkeletonCard />}{<SkeletonCard />}</div>;
 
@@ -57,7 +61,9 @@ function Reports() {
         <div className="absolute inset-0 bg-gradient-to-t from-white via-white/60 to-transparent dark:from-[#09090b] dark:via-[#09090b]/60" />
         <div className="absolute bottom-0 left-0 right-0 p-6">
           <h1 className="text-xl font-bold text-[#09090b] dark:text-[#fafafa]">Reports</h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">Visualize your spending patterns</p>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+            {reportMonthLabel ? `Showing latest spending data for ${reportMonthLabel}` : 'Visualize your spending patterns'}
+          </p>
         </div>
       </div>
 
@@ -115,7 +121,7 @@ function Reports() {
               <BarChart data={barData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#737373' }} />
-                <YAxis tick={{ fontSize: 11, fill: '#737373' }} tickFormatter={(v) => `$${v}`} />
+                <YAxis tick={{ fontSize: 11, fill: '#737373' }} tickFormatter={(v) => formatCurrency(v)} />
                 <Tooltip content={(props) => <CustomTooltip {...props} formatCurrency={formatCurrency} />} />
                 <Legend wrapperStyle={{ fontSize: '11px' }} />
                 {topCategories.map((category, index) => (

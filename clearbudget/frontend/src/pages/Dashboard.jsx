@@ -1,23 +1,25 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getBudgetOverview, getRecentTransactions, getSpendingByCategory } from '../api';
+import { getBudgetOverview, getRecentTransactions, getSpendingByCategory, getRecurring, getGoals } from '../api';
 import { DashboardSkeleton } from '../components/Skeleton';
 import { useCurrency } from '../context/CurrencyContext';
 
 function useDashboardData() {
-  const [data, setData] = useState({ overview: null, recentTransactions: [], spending: [], overBudget: [] });
+  const [data, setData] = useState({ overview: null, recentTransactions: [], spending: [], overBudget: [], recurring: [], goals: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   useEffect(() => {
     const c = new AbortController();
-    Promise.all([getBudgetOverview(), getRecentTransactions(5), getSpendingByCategory()])
-      .then(([o, t, s]) => {
+    Promise.all([getBudgetOverview(), getRecentTransactions(5), getSpendingByCategory(), getRecurring(), getGoals()])
+      .then(([o, t, s, r, g]) => {
         if (c.signal.aborted) return;
         setData({
           overview: o.data,
           recentTransactions: t.data,
           spending: s.data.slice(0, 5),
           overBudget: s.data.filter((i) => parseFloat(i.available) < 0),
+          recurring: r.data.filter((item) => item.enabled !== false),
+          goals: g.data,
         });
         setLoading(false);
       })
@@ -92,10 +94,165 @@ function BudgetAlert({ categories, formatCurrency }) {
   );
 }
 
+function BudgetHealth({ score, status, statusClass }) {
+  return (
+    <div className="surface p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-400 dark:text-neutral-500">Budget Health</p>
+          <p className={`mt-1 text-[13px] font-semibold ${statusClass}`}>{status}</p>
+        </div>
+        <div className="relative h-16 w-16 shrink-0">
+          <svg className="h-16 w-16 -rotate-90" viewBox="0 0 64 64">
+            <circle cx="32" cy="32" r="26" stroke="currentColor" strokeWidth="7" fill="none" className="text-neutral-100 dark:text-neutral-800" />
+            <circle
+              cx="32"
+              cy="32"
+              r="26"
+              stroke="currentColor"
+              strokeWidth="7"
+              fill="none"
+              strokeLinecap="round"
+              strokeDasharray={`${score * 1.63} 163`}
+              className={score >= 75 ? 'text-emerald-500' : score >= 45 ? 'text-amber-500' : 'text-red-500'}
+            />
+          </svg>
+          <span className="absolute inset-0 flex items-center justify-center text-[16px] font-black tracking-[-0.04em] text-[#09090b] dark:text-[#fafafa]">{score}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InsightCard({ label, value, description, tone = 'neutral' }) {
+  const tones = {
+    neutral: 'text-neutral-700 dark:text-neutral-200',
+    good: 'text-emerald-700 dark:text-emerald-300',
+    warning: 'text-amber-700 dark:text-amber-300',
+    danger: 'text-red-700 dark:text-red-300',
+  };
+  return (
+    <div className="metric-tile">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-400 dark:text-neutral-500">{label}</p>
+      <p className={`mt-1 text-[16px] font-bold tracking-[-0.02em] tabular-nums ${tones[tone]}`}>{value}</p>
+      <p className="mt-1 text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">{description}</p>
+    </div>
+  );
+}
+
+function SectionTitle({ title, action, to }) {
+  return (
+    <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-neutral-100 dark:border-neutral-800/50">
+      <h2 className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa]">{title}</h2>
+      {action && to && (
+        <Link to={to} className="text-[11px] font-semibold text-neutral-400 hover:text-[#09090b] dark:hover:text-[#fafafa] transition-colors">
+          {action}
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function PriorityPanel({ priorities }) {
+  return (
+    <div className="card overflow-hidden">
+      <SectionTitle title="Today's Focus" action="Open Budget" to="/budget" />
+      <div className="divide-y divide-neutral-100 dark:divide-neutral-800/40">
+        {priorities.map((item) => (
+          <Link key={item.title} to={item.to} className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-neutral-50/70 dark:hover:bg-neutral-800/20">
+            <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${item.tone}`}>
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa]">{item.title}</p>
+              <p className="mt-0.5 text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">{item.description}</p>
+            </div>
+            <svg className="mt-1 h-3.5 w-3.5 shrink-0 text-neutral-300 dark:text-neutral-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function UpcomingBills({ bills, formatCurrency }) {
+  return (
+    <div className="card overflow-hidden">
+      <SectionTitle title="Upcoming Bills" action="Manage" to="/recurring" />
+      {bills.length === 0 ? (
+        <div className="px-4 py-8 text-center">
+          <p className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa]">No upcoming bills</p>
+          <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">Recurring payments will show here.</p>
+        </div>
+      ) : (
+        <div className="divide-y divide-neutral-100 dark:divide-neutral-800/40">
+          {bills.map((bill) => {
+            const due = new Date(`${bill.next_due}T00:00:00`);
+            const days = Math.ceil((due - new Date()) / 86400000);
+            const dueLabel = days < 0 ? `${Math.abs(days)}d late` : days === 0 ? 'Today' : `${days}d`;
+            return (
+              <div key={bill.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa]">{bill.payee}</p>
+                  <p className="mt-0.5 text-[11px] text-neutral-500 dark:text-neutral-400">{bill.category_name || bill.frequency}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[13px] font-bold tabular-nums text-[#09090b] dark:text-[#fafafa]">{formatCurrency(Math.abs(bill.amount))}</p>
+                  <span className={`mt-0.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${days <= 3 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300' : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400'}`}>
+                    {dueLabel}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GoalMomentum({ goals, formatCurrency }) {
+  return (
+    <div className="card overflow-hidden">
+      <SectionTitle title="Goal Momentum" action="View Goals" to="/goals" />
+      {goals.length === 0 ? (
+        <div className="px-4 py-8 text-center">
+          <p className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa]">No active goals</p>
+          <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">Create a target to track progress.</p>
+        </div>
+      ) : (
+        <div className="p-4 space-y-3.5">
+          {goals.map((goal) => {
+            const target = parseFloat(goal.target_amount) || 0;
+            const current = parseFloat(goal.current_amount) || 0;
+            const progress = target > 0 ? Math.min((current / target) * 100, 100) : 0;
+            return (
+              <div key={goal.id}>
+                <div className="mb-1.5 flex items-center justify-between gap-3">
+                  <span className="truncate text-[12px] font-semibold text-[#09090b] dark:text-[#fafafa]">{goal.name}</span>
+                  <span className="text-[11px] font-semibold tabular-nums text-neutral-500 dark:text-neutral-400">{progress.toFixed(0)}%</span>
+                </div>
+                <div className="progress">
+                  <div className="progress-fill bg-emerald-500" style={{ width: `${progress}%` }} />
+                </div>
+                <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">{formatCurrency(current)} saved of {formatCurrency(target)}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ---- Dashboard ---- */
 function Dashboard() {
   const { formatCurrency } = useCurrency();
-  const { overview, recentTransactions, spending, overBudget, loading, error } = useDashboardData();
+  const { overview, recentTransactions, spending, overBudget, recurring, goals, loading, error } = useDashboardData();
   const monthLabel = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   if (loading) return <DashboardSkeleton />;
@@ -116,30 +273,101 @@ function Dashboard() {
   const totalBalance = overview?.total_balance ?? 0;
   const totalBudgeted = overview?.total_budgeted ?? 0;
   const totalActivity = overview?.total_activity ?? 0;
+  const available = overview?.available ?? 0;
+  const spent = Math.abs(totalActivity);
+  const budgetUtilization = totalBudgeted > 0 ? Math.min((spent / totalBudgeted) * 100, 100) : 0;
+  const overBudgetPenalty = Math.min(overBudget.length * 12, 36);
+  const readyPenalty = toBeBudgeted < 0 ? 20 : 0;
+  const healthScore = Math.max(0, Math.round(100 - budgetUtilization * 0.45 - overBudgetPenalty - readyPenalty));
+  const healthStatus = healthScore >= 75 ? 'Healthy and on track' : healthScore >= 45 ? 'Needs attention' : 'Action needed';
+  const healthStatusClass = healthScore >= 75 ? 'text-emerald-600 dark:text-emerald-400' : healthScore >= 45 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400';
+  const topSpending = spending[0];
+  const unassignedTone = toBeBudgeted >= 0 ? 'good' : 'danger';
+  const upcomingBills = [...recurring]
+    .filter((item) => item.next_due)
+    .sort((a, b) => new Date(a.next_due) - new Date(b.next_due))
+    .slice(0, 4);
+  const activeGoals = [...goals]
+    .filter((goal) => parseFloat(goal.current_amount || 0) < parseFloat(goal.target_amount || 0))
+    .sort((a, b) => {
+      const aPct = (parseFloat(a.current_amount || 0) / Math.max(parseFloat(a.target_amount || 0), 1));
+      const bPct = (parseFloat(b.current_amount || 0) / Math.max(parseFloat(b.target_amount || 0), 1));
+      return bPct - aPct;
+    })
+    .slice(0, 3);
+  const nextBill = upcomingBills[0];
+  const nextBillDate = nextBill?.next_due ? new Date(`${nextBill.next_due}T00:00:00`) : null;
+  const nextBillDays = nextBillDate ? Math.ceil((nextBillDate - new Date()) / 86400000) : null;
+  const priorities = [
+    ...(overBudget.length > 0 ? [{
+      title: `Cover ${overBudget.length} overspent categor${overBudget.length === 1 ? 'y' : 'ies'}`,
+      description: `${overBudget[0].category} needs ${formatCurrency(Math.abs(overBudget[0].available))}${overBudget.length > 1 ? ' first' : ''}.`,
+      to: '/budget',
+      icon: 'M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z',
+      tone: 'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-300',
+    }] : []),
+    ...(toBeBudgeted > 0 ? [{
+      title: 'Assign ready money',
+      description: `${formatCurrency(toBeBudgeted)} is not assigned to categories yet.`,
+      to: '/budget',
+      icon: 'M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5h16.5M4.5 9.75h15M6.75 15h10.5',
+      tone: 'bg-orange-100 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300',
+    }] : []),
+    ...(nextBill ? [{
+      title: `${nextBill.payee} is coming up`,
+      description: `${formatCurrency(Math.abs(nextBill.amount))} due ${nextBillDays <= 0 ? 'today' : `in ${nextBillDays} day${nextBillDays === 1 ? '' : 's'}`}.`,
+      to: '/recurring',
+      icon: 'M6.75 3v2.25M17.25 3v2.25M3.75 8.25h16.5M4.5 6.75h15A1.5 1.5 0 0121 8.25v10.5A1.5 1.5 0 0119.5 20.25h-15A1.5 1.5 0 013 18.75V8.25A1.5 1.5 0 014.5 6.75z',
+      tone: 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300',
+    }] : []),
+    {
+      title: 'Review recent activity',
+      description: recentTransactions.length ? `${recentTransactions.length} latest transactions are ready to scan.` : 'Add your first transaction to start tracking.',
+      to: '/transactions',
+      icon: 'M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5',
+      tone: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300',
+    },
+  ].slice(0, 3);
 
   return (
-    <div className="space-y-5 stagger">
+    <div className="space-y-4 page-enter">
       {/* Hero */}
-      <div className="relative overflow-hidden rounded-2xl border border-neutral-200/60 dark:border-neutral-800/60">
+      <div className="relative overflow-hidden rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.45)]">
         <img src="/hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-30 dark:opacity-20" aria-hidden="true" />
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 p-6 lg:p-8">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-orange-500 dark:text-orange-400 mb-1">Welcome back</p>
-            <h1 className="text-3xl lg:text-4xl font-black tracking-[-0.04em] text-[#09090b] dark:text-[#fafafa]">
-              {monthLabel}
-            </h1>
-            <p className="text-[13px] text-neutral-500 dark:text-neutral-400 mt-1 max-w-md">
-              {toBeBudgeted >= 0
-                ? `You have ${formatCurrency(toBeBudgeted)} ready to assign. Every dollar should have a job.`
-                : 'Some categories are over budget. Review and adjust to stay on track.'}
-            </p>
+        <div className="absolute inset-0 bg-gradient-to-r from-white/92 via-white/70 to-white/20 dark:from-[#09090b]/95 dark:via-[#09090b]/75 dark:to-[#09090b]/20" aria-hidden="true" />
+        <div className="relative z-10 grid gap-6 p-5 lg:grid-cols-[minmax(0,1fr)_300px] lg:p-7">
+          <div className="flex flex-col justify-between gap-7">
+            <div>
+              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-orange-200/70 bg-orange-50/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-orange-700 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                {monthLabel}
+              </div>
+              <h1 className="max-w-2xl text-3xl font-black leading-tight tracking-[-0.04em] text-[#09090b] dark:text-[#fafafa] lg:text-4xl">
+                Keep the budget balanced without hunting through tabs.
+              </h1>
+              <p className="mt-2 max-w-xl text-[13px] text-neutral-600 dark:text-neutral-300">
+                {toBeBudgeted >= 0
+                  ? `${formatCurrency(toBeBudgeted)} is ready to assign. Keep the plan tight and every dollar accounted for.`
+                  : `${formatCurrency(Math.abs(toBeBudgeted))} needs coverage before the budget is balanced.`}
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 max-w-3xl">
+              <InsightCard label="Assigned" value={formatCurrency(totalBudgeted)} description={`${budgetUtilization.toFixed(0)}% of assigned funds used`} />
+              <InsightCard label="Available" value={formatCurrency(available)} description="Budgeted minus current activity" tone={available >= 0 ? 'good' : 'danger'} />
+              <InsightCard label="Ready" value={formatCurrency(toBeBudgeted)} description={toBeBudgeted >= 0 ? 'Waiting for a job' : 'Needs budget coverage'} tone={unassignedTone} />
+            </div>
           </div>
-          <div className="flex gap-2 self-start lg:self-auto">
-            <Link to="/transactions" className="btn-primary text-[12px] px-3 py-[7px]">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-              Add Transaction
-            </Link>
-            <Link to="/budget" className="btn-secondary text-[12px] px-3 py-[7px]">Review Budget</Link>
+          <div className="space-y-3">
+            <BudgetHealth score={healthScore} status={healthStatus} statusClass={healthStatusClass} />
+            <div className="surface p-3.5">
+              <p className="text-[11px] font-semibold text-[#09090b] dark:text-[#fafafa]">Quick Actions</p>
+              <div className="mt-2 flex gap-2">
+                <Link to="/transactions" className="btn-primary flex-1 text-[12px] px-3 py-[7px]">
+                  Add
+                </Link>
+                <Link to="/budget" className="btn-secondary flex-1 text-[12px] px-3 py-[7px]">Budget</Link>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -147,12 +375,12 @@ function Dashboard() {
       {/* Alert */}
       {overBudget.length > 0 && <BudgetAlert categories={overBudget} formatCurrency={formatCurrency} />}
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 stagger">
-        <Stat label="Ready to Assign" value={formatCurrency(toBeBudgeted)} trend={toBeBudgeted >= 0 ? '+12%' : 'Over'} trendUp={toBeBudgeted >= 0} accent="orange" />
-        <Stat label="Total Balance" value={formatCurrency(totalBalance)} trend="+3.2%" trendUp accent="emerald" />
-        <Stat label="Budgeted" value={formatCurrency(totalBudgeted)} accent="blue" />
-        <Stat label="Spent" value={formatCurrency(Math.abs(totalActivity))} trend="62%" trendUp={Math.abs(totalActivity) < totalBudgeted} accent="violet" />
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
+        <PriorityPanel priorities={priorities} />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-1">
+          <UpcomingBills bills={upcomingBills} formatCurrency={formatCurrency} />
+          <GoalMomentum goals={activeGoals} formatCurrency={formatCurrency} />
+        </div>
       </div>
 
       {/* Two column */}

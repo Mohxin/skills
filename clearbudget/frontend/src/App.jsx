@@ -60,13 +60,13 @@ function App() {
   return (
     <CurrencyProvider>
       <ToastProvider>
-        <div className="min-h-screen bg-[#fafafa] dark:bg-[#09090b]">
+        <div className="min-h-screen bg-transparent">
           {sidebarOpen && <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
           <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
           <div className="lg:pl-[256px]">
             {/* Top bar */}
-            <header className="sticky top-0 z-30 flex items-center h-[52px] px-4 lg:px-6 bg-[#fafafa]/80 dark:bg-[#09090b]/80 backdrop-blur-xl border-b border-neutral-200/60 dark:border-neutral-800/60">
+            <header className="sticky top-0 z-30 flex items-center h-[52px] px-4 lg:px-6 bg-white/70 dark:bg-[#09090b]/72 backdrop-blur-xl border-b border-neutral-200/60 dark:border-neutral-800/60">
               <button className="lg:hidden p-1.5 -ml-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 mr-2" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
                 <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
               </button>

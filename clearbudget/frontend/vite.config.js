@@ -15,5 +15,14 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          charts: ['recharts'],
+          router: ['react-router-dom'],
+          vendor: ['axios', 'react', 'react-dom'],
+        },
+      },
+    },
   },
 })

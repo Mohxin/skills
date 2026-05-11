@@ -211,11 +211,22 @@ export default async function handler(req, res) {
       }
       if (path[1] === 'spending-by-category') {
         const now = new Date();
-        const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-        const end = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().split('T')[0];
+        let reportDate = now;
+        const fetchMonthTransactions = async (date) => {
+          const start = new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0];
+          const end = new Date(date.getFullYear(), date.getMonth() + 1, 1).toISOString().split('T')[0];
+          return supabase.from('transactions').select('amount, category_id').gte('date', start).lt('date', end).lt('amount', 0);
+        };
 
         // Get transactions
-        const { data: txns, error: e } = await supabase.from('transactions').select('amount, category_id').gte('date', start).lt('date', end).lt('amount', 0);
+        let { data: txns, error: e } = await fetchMonthTransactions(reportDate);
+        if (!e && !txns?.length) {
+          const { data: latest } = await supabase.from('transactions').select('date').lt('amount', 0).order('date', { ascending: false }).limit(1).maybeSingle();
+          if (latest?.date) {
+            reportDate = new Date(`${latest.date}T00:00:00`);
+            ({ data: txns, error: e } = await fetchMonthTransactions(reportDate));
+          }
+        }
         if (e) return serverErr(res, e.message);
 
         // Get categories separately
@@ -228,7 +239,7 @@ export default async function handler(req, res) {
           const id = tx.category_id;
           if (!id || !catMap[id]) return;
           const cat = catMap[id];
-          if (!map[id]) map[id] = { category: cat.name, group_name: cat.category_groups?.name, spent: 0, budgeted: parseFloat(cat.budgeted || 0), available: parseFloat(cat.activity || 0) + parseFloat(cat.budgeted || 0) };
+          if (!map[id]) map[id] = { month: reportDate.toISOString().slice(0, 7), category: cat.name, group_name: cat.category_groups?.name, spent: 0, budgeted: parseFloat(cat.budgeted || 0), available: parseFloat(cat.activity || 0) + parseFloat(cat.budgeted || 0) };
           map[id].spent += Math.abs(parseFloat(tx.amount));
         });
         return ok(res, Object.values(map).sort((a, b) => b.spent - a.spent));
