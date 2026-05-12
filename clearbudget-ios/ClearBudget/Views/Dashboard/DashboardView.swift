@@ -13,12 +13,36 @@ struct DashboardView: View {
     @EnvironmentObject var currencyManager: CurrencyManager
     @State private var loading = true
     @State private var overview: DashboardOverview?
+    @State private var recurring: [APIRecurring] = []
+    @State private var spending: [APISpending] = []
     
     struct DashboardOverview {
         let totalBalance: Double
         let toBeBudgeted: Double
         let totalBudgeted: Double
         let totalSpent: Double
+        let available: Double
+    }
+
+    private var monthlyBills: Double {
+        recurring.filter(\.enabled).reduce(0) { total, item in
+            let amount = abs(item.amount)
+            switch item.frequency {
+            case "weekly": return total + amount * 4.33
+            case "biweekly": return total + amount * 2.17
+            case "yearly": return total + amount / 12
+            default: return total + amount
+            }
+        }
+    }
+
+    private var budgetUtilization: Double {
+        guard let overview, overview.totalBudgeted > 0 else { return 0 }
+        return min(abs(overview.totalSpent) / overview.totalBudgeted, 1)
+    }
+
+    private var overspentCategory: APISpending? {
+        spending.first { $0.available < 0 }
     }
     
     var body: some View {
@@ -72,30 +96,135 @@ struct DashboardView: View {
     
     // MARK: - Header
     private var headerSection: some View {
-        LinearGradient(
-            colors: [
-                Color(hex: "fef3e2"),
-                Color(hex: "fce8c5"),
-                Color(hex: "f9cc8a")
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .frame(height: 120)
-        .overlay(alignment: .bottomLeading) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(Date.now.formatted(date: .abbreviated, time: .omitted))
-                    .font(.caption)
-                    .foregroundStyle(.white)
-                Text(monthTitle)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundStyle(.white)
+        ZStack(alignment: .leading) {
+            LinearGradient(
+                colors: [
+                    Color(hex: "fff7ed"),
+                    Color(hex: "ffedd5"),
+                    Color(hex: "fed7aa")
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            Circle()
+                .fill(.orange.opacity(0.16))
+                .frame(width: 180, height: 180)
+                .offset(x: 220, y: -60)
+
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 8) {
+                    statusBadge
+                    Text(monthTitle)
+                        .font(.caption2.weight(.bold))
+                        .textCase(.uppercase)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(.white.opacity(0.72), in: Capsule())
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Your money plan, ready at a glance.")
+                        .font(.title2.weight(.black))
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(primaryMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if let overview {
+                    HStack(spacing: 8) {
+                        BannerMiniMetric(title: "Ready", value: currencyManager.format(overview.toBeBudgeted), tint: overview.toBeBudgeted >= 0 ? .green : .red)
+                        BannerMiniMetric(title: "Available", value: currencyManager.format(overview.available), tint: overview.available >= 0 ? .green : .red)
+                        BannerMiniMetric(title: "Bills", value: currencyManager.format(monthlyBills), tint: .orange)
+                    }
+                }
+
+                nextMoveCard
             }
-            .padding(.bottom, 16)
-            .padding(.leading)
+            .padding()
         }
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    private var statusBadge: some View {
+        let text: String
+        let tint: Color
+
+        if overspentCategory != nil {
+            text = "Action needed"
+            tint = .red
+        } else if (overview?.toBeBudgeted ?? 0) > 0 {
+            text = "Ready to assign"
+            tint = .orange
+        } else {
+            text = "Balanced"
+            tint = .green
+        }
+
+        return HStack(spacing: 6) {
+            Circle()
+                .fill(tint)
+                .frame(width: 6, height: 6)
+            Text(text)
+        }
+        .font(.caption2.weight(.bold))
+        .textCase(.uppercase)
+        .foregroundStyle(tint)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(tint.opacity(0.12), in: Capsule())
+    }
+
+    private var primaryMessage: String {
+        if let overspentCategory {
+            return "\(overspentCategory.category) needs attention before the plan is balanced."
+        }
+
+        if let overview, overview.toBeBudgeted > 0 {
+            return "\(currencyManager.format(overview.toBeBudgeted)) is waiting to be assigned."
+        }
+
+        return "Track the next bill, assign new money, and keep spending aligned."
+    }
+
+    private var nextMoveCard: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "sparkles")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.orange)
+                .frame(width: 28, height: 28)
+                .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Next move")
+                    .font(.caption.weight(.semibold))
+                Text(nextMoveText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background(.white.opacity(0.72), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private var nextMoveText: String {
+        if overspentCategory != nil {
+            return "Cover overspending first."
+        }
+
+        if (overview?.toBeBudgeted ?? 0) > 0 {
+            return "Assign ready money now."
+        }
+
+        return "Review recent activity and stay on pace."
     }
     
     private var monthTitle: String {
@@ -176,19 +305,54 @@ struct DashboardView: View {
         do {
             let service = SupabaseService.shared
             let overview = try await service.fetchOverview()
+            async let recurring = service.fetchRecurring()
+            async let spending = service.fetchSpendingByCategory()
             await MainActor.run {
                 self.overview = DashboardOverview(
                     totalBalance: overview.totalBalance,
                     toBeBudgeted: overview.toBeBudgeted,
                     totalBudgeted: overview.totalBudgeted,
-                    totalSpent: overview.totalActivity
+                    totalSpent: overview.totalActivity,
+                    available: overview.available
                 )
+            }
+
+            let loadedRecurring = try await recurring
+            let loadedSpending = try await spending
+
+            await MainActor.run {
+                self.recurring = loadedRecurring
+                self.spending = loadedSpending
                 loading = false
             }
         } catch {
             print("Failed to load overview: \(error)")
             loading = false
         }
+    }
+}
+
+private struct BannerMiniMetric: View {
+    let title: String
+    let value: String
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2.weight(.bold))
+                .textCase(.uppercase)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.caption.weight(.bold))
+                .monospacedDigit()
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(.white.opacity(0.72), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 

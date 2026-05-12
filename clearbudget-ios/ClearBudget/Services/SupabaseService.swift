@@ -8,8 +8,7 @@ import SwiftData
 
 // MARK: - Configuration
 enum SupabaseConfig {
-    static let url = "https://jzzkkavjijfadpzniaci.supabase.co"
-    static let anonKey = "sb_publishable_43RyjvUQoKLHILyNmExNZw_WVuV8fXF"
+    static let apiBaseURL = Bundle.main.object(forInfoDictionaryKey: "CLEARBUDGET_API_BASE_URL") as? String ?? "http://localhost:3001"
 }
 
 // MARK: - API Response Types
@@ -74,18 +73,81 @@ struct APIOverview: Codable {
     }
 }
 
+struct APIRecurring: Codable, Identifiable {
+    let id: Int
+    let accountId: Int?
+    let categoryId: Int?
+    let payee: String
+    let amount: Double
+    let frequency: String
+    let nextDue: String
+    let enabled: Bool
+    let accountName: String?
+    let categoryName: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case accountId = "account_id"
+        case categoryId = "category_id"
+        case payee, amount, frequency, enabled
+        case nextDue = "next_due"
+        case accountName = "account_name"
+        case categoryName = "category_name"
+    }
+}
+
+struct APIGoal: Codable, Identifiable {
+    let id: Int
+    let categoryId: Int?
+    let name: String
+    let targetAmount: Double
+    let currentAmount: Double
+    let targetDate: String?
+    let categoryName: String?
+    let groupName: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name
+        case categoryId = "category_id"
+        case targetAmount = "target_amount"
+        case currentAmount = "current_amount"
+        case targetDate = "target_date"
+        case categoryName = "category_name"
+        case groupName = "group_name"
+    }
+}
+
+struct APIInsights: Codable {
+    let totalSpent: Double
+    let avgDaily: Double
+    let topMerchants: [APITopMerchant]
+    let topCategories: [APITopCategory]
+    let transactionCount: Int
+}
+
+struct APITopMerchant: Codable, Identifiable {
+    var id: String { payee }
+    let payee: String
+    let total: Double
+    let count: Int
+}
+
+struct APITopCategory: Codable, Identifiable {
+    var id: String { category }
+    let category: String
+    let total: Double
+}
+
 // MARK: - Service
 @MainActor
 final class SupabaseService: ObservableObject {
     static let shared = SupabaseService()
     
-    private let baseURL = SupabaseConfig.url
+    private let baseURL = SupabaseConfig.apiBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     private let headers: [String: String]
     
     init() {
         self.headers = [
-            "apikey": SupabaseConfig.anonKey,
-            "Authorization": "Bearer \(SupabaseConfig.anonKey)",
             "Content-Type": "application/json",
             "Prefer": "return=representation"
         ]
@@ -118,6 +180,18 @@ final class SupabaseService: ObservableObject {
     
     func fetchSpendingByCategory() async throws -> [APISpending] {
         try await fetch(path: "/reports/spending-by-category")
+    }
+
+    func fetchRecurring() async throws -> [APIRecurring] {
+        try await fetch(path: "/recurring")
+    }
+
+    func fetchGoals() async throws -> [APIGoal] {
+        try await fetch(path: "/goals")
+    }
+
+    func fetchInsights() async throws -> APIInsights {
+        try await fetch(path: "/reports/insights")
     }
     
     // MARK: - Create

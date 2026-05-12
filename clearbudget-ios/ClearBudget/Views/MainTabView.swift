@@ -16,6 +16,7 @@ struct MainTabView: View {
         case transactions
         case accounts
         case goals
+        case planner
         case reports
         case insights
 
@@ -26,6 +27,7 @@ struct MainTabView: View {
             case .transactions: return "Transactions"
             case .accounts: return "Accounts"
             case .goals: return "Goals"
+            case .planner: return "Planner"
             case .reports: return "Reports"
             case .insights: return "Insights"
             }
@@ -38,6 +40,7 @@ struct MainTabView: View {
             case .transactions: return "arrow.left.arrow.right"
             case .accounts: return "creditcard"
             case .goals: return "target"
+            case .planner: return "map"
             case .reports: return "chart.bar"
             case .insights: return "lightbulb"
             }
@@ -75,6 +78,12 @@ struct MainTabView: View {
             }
             .tabItem { Label(Tab.goals.title, systemImage: Tab.goals.icon) }
             .tag(Tab.goals)
+
+            NavigationStack {
+                PlannerView()
+            }
+            .tabItem { Label(Tab.planner.title, systemImage: Tab.planner.icon) }
+            .tag(Tab.planner)
 
             NavigationStack {
                 ReportsView()

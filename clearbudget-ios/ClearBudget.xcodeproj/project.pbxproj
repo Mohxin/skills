@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0DA7D58F769D39163735BA1D /* SeedDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78CE6F7ABD1375638C09F9EF /* SeedDataService.swift */; };
+		1F83EDBC83F721F6792F24FE /* PlannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D1E919EEAF8D464FD3A7F90 /* PlannerView.swift */; };
 		460D6BD848ABE4795A7B7AD7 /* ClearBudgetApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2004D7509D7404715115BEB /* ClearBudgetApp.swift */; };
 		50DC350D31AE669D4898C358 /* Category.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9DD2FC3DACC94E4E931286A /* Category.swift */; };
 		5FA42A0D5570F609F87917AC /* Transaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 755AF6F6C31475B0C71FCCB9 /* Transaction.swift */; };
@@ -32,6 +33,7 @@
 /* Begin PBXFileReference section */
 		052EDDDD6392DBDE02E39EFB /* SupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseService.swift; sourceTree = "<group>"; };
 		0C346308D8C2566F95A94C83 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
+		0D1E919EEAF8D464FD3A7F90 /* PlannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerView.swift; sourceTree = "<group>"; };
 		3B0C7995C5D502CBD55B18C5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		68A4FD27D38CB3DE7AED6338 /* CurrencyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyManager.swift; sourceTree = "<group>"; };
 		6CB6E47CC4D09F267BAE3609 /* AddTransactionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTransactionSheet.swift; sourceTree = "<group>"; };
@@ -64,6 +66,7 @@
 				16B73A3EE9091F4C671E0A7A /* Dashboard */,
 				29642B45B93E00BD85AFC54D /* Goals */,
 				F564A040C94C29801F7E2FF8 /* Insights */,
+				56EAE4BDE8D6C39D55478DD0 /* Planner */,
 				4E991A2F58AD592BEDCCB5B3 /* Reports */,
 				9C4B21600B055795D04DC3B9 /* Transactions */,
 			);
@@ -109,6 +112,14 @@
 				E9B6CEDDEB3C5F5A6CF2EEBD /* ReportsView.swift */,
 			);
 			path = Reports;
+			sourceTree = "<group>";
+		};
+		56EAE4BDE8D6C39D55478DD0 /* Planner */ = {
+			isa = PBXGroup;
+			children = (
+				0D1E919EEAF8D464FD3A7F90 /* PlannerView.swift */,
+			);
+			path = Planner;
 			sourceTree = "<group>";
 		};
 		5828151904CE7851E458AFB2 /* Products */ = {
@@ -278,6 +289,7 @@
 				F2736B888C2A9F6CD93DE120 /* GoalsView.swift in Sources */,
 				6B2868F666A3271DFB8A5B15 /* InsightsView.swift in Sources */,
 				676754D2CFD7CC8ADBA67025 /* MainTabView.swift in Sources */,
+				1F83EDBC83F721F6792F24FE /* PlannerView.swift in Sources */,
 				7AFA40E30A70C274D3610158 /* ReportsView.swift in Sources */,
 				0DA7D58F769D39163735BA1D /* SeedDataService.swift in Sources */,
 				C3FF0B4C63B2BBA39933D4BB /* SupabaseService.swift in Sources */,
@@ -344,6 +356,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ClearBudget;
+				INFOPLIST_KEY_CLEARBUDGET_API_BASE_URL = "http://localhost:3001";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -409,6 +422,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ClearBudget;
+				INFOPLIST_KEY_CLEARBUDGET_API_BASE_URL = "http://localhost:3001";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -436,6 +450,10 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				OTHER_LDFLAGS = (
+					"-framework",
+					Charts,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.clearbudget.app;
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -453,6 +471,10 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"-framework",
+					Charts,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.clearbudget.app;
 				SDKROOT = iphoneos;
