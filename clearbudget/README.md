@@ -62,8 +62,8 @@ cd frontend && npm install && cd ..
 
 # Set up Supabase (run SQL in backend/src/db/migrate.sql)
 
-# Seed realistic dummy data (6 months of transactions)
-cd backend && npm install && npm run db:seed
+# Optional: clear all app data while keeping the tables
+cd backend && npm install && npm run db:clear
 
 # Start dev server
 cd frontend && npm run dev
@@ -71,7 +71,7 @@ cd frontend && npm run dev
 
 ## 🔌 Use Real Data
 
-ClearBudget reads and writes to Supabase through the backend API. To use your own real data instead of the seed data:
+ClearBudget reads and writes to Supabase through the backend API. To use your own real data:
 
 1. Create a Supabase project.
 2. Run `backend/src/db/migrate.sql` in the Supabase SQL Editor.
@@ -83,7 +83,7 @@ SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
-4. Do not run `npm run db:seed` if you want an empty real account.
+4. Run `npm run db:clear` if you want empty tables before importing real data.
 5. Start the backend and frontend:
 
 ```bash
@@ -133,7 +133,7 @@ clearbudget/
 ├── backend/
 │   └── src/db/
 │       ├── migrate.sql       # Database schema
-│       └── seed.js           # Dummy data seeder
+│       └── clear-data.js     # Clears app data while keeping tables
 ├── vercel.json
 └── package.json
 ```
