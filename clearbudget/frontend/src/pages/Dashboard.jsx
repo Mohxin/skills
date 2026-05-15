@@ -11,7 +11,14 @@ function useDashboardData() {
   const [error, setError] = useState(null);
   useEffect(() => {
     const c = new AbortController();
-    Promise.all([getBudgetOverview(), getRecentTransactions(5), getSpendingByCategory(), getRecurring(), getGoals(), getCashFlowForecast(30)])
+    Promise.all([
+      getBudgetOverview(),
+      getRecentTransactions(5),
+      getSpendingByCategory(),
+      getRecurring(),
+      getGoals(),
+      getCashFlowForecast(30).catch(() => ({ data: null })),
+    ])
       .then(([o, t, s, r, g, f]) => {
         if (c.signal.aborted) return;
         setData({

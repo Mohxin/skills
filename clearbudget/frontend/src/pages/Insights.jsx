@@ -49,7 +49,14 @@ function Insights() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getInsights(), getAccounts(), getRecurring(), getGoals(), getSpendingByCategory()])
+    const emptyInsights = { totalSpent: 0, avgDaily: 0, topMerchants: [], topCategories: [], transactionCount: 0 };
+    Promise.all([
+      getInsights().catch(() => ({ data: emptyInsights })),
+      getAccounts(),
+      getRecurring(),
+      getGoals(),
+      getSpendingByCategory(),
+    ])
       .then(([insightsRes, accRes, recurringRes, goalsRes, spendingRes]) => {
         setInsights(insightsRes.data);
         setAccounts(accRes.data);

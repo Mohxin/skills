@@ -47,7 +47,13 @@ function Planner() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getBudgetOverview(), getRecurring(), getGoals(), getSpendingByCategory(), getCashFlowForecast(30)])
+    Promise.all([
+      getBudgetOverview(),
+      getRecurring(),
+      getGoals(),
+      getSpendingByCategory(),
+      getCashFlowForecast(30).catch(() => ({ data: null })),
+    ])
       .then(([overviewRes, recurringRes, goalsRes, spendingRes, forecastRes]) => {
         setData({
           overview: overviewRes.data,
