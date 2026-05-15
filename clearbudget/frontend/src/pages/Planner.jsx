@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getBudgetOverview, getRecurring, getGoals, getSpendingByCategory } from '../api';
+import { getBudgetOverview, getRecurring, getGoals, getSpendingByCategory, getCashFlowForecast } from '../api';
+import CashFlowForecast from '../components/CashFlowForecast';
 import { SkeletonCard } from '../components/Skeleton';
 import { useCurrency } from '../context/CurrencyContext';
 
@@ -42,17 +43,18 @@ function Recommendation({ title, description, to, tone = 'neutral' }) {
 
 function Planner() {
   const { formatCurrency } = useCurrency();
-  const [data, setData] = useState({ overview: null, recurring: [], goals: [], spending: [] });
+  const [data, setData] = useState({ overview: null, recurring: [], goals: [], spending: [], forecast: null });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getBudgetOverview(), getRecurring(), getGoals(), getSpendingByCategory()])
-      .then(([overviewRes, recurringRes, goalsRes, spendingRes]) => {
+    Promise.all([getBudgetOverview(), getRecurring(), getGoals(), getSpendingByCategory(), getCashFlowForecast(30)])
+      .then(([overviewRes, recurringRes, goalsRes, spendingRes, forecastRes]) => {
         setData({
           overview: overviewRes.data,
           recurring: recurringRes.data.filter((item) => item.enabled !== false),
           goals: goalsRes.data,
           spending: spendingRes.data,
+          forecast: forecastRes.data,
         });
         setLoading(false);
       })
@@ -187,6 +189,17 @@ function Planner() {
                 <div className="progress-fill bg-orange-500" style={{ width: `${Math.min((plan.discretionarySpend / Math.max(plan.monthlyBills + plan.discretionarySpend, 1)) * 100, 100)}%` }} />
               </div>
             </div>
+            {data.forecast && (
+              <div>
+                <div className="mb-1.5 flex items-center justify-between text-[11px]">
+                  <span className="font-medium text-neutral-500 dark:text-neutral-400">30-day cushion</span>
+                  <span className="font-semibold tabular-nums text-neutral-700 dark:text-neutral-300">{formatCurrency(data.forecast.safeToSpend || 0)}</span>
+                </div>
+                <div className="progress">
+                  <div className={`progress-fill ${data.forecast.status === 'risk' ? 'bg-red-500' : data.forecast.status === 'tight' ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(((data.forecast.safeToSpend || 0) / Math.max(data.forecast.startingBalance || 1, 1)) * 100, 100)}%` }} />
+                </div>
+              </div>
+            )}
             <div className="rounded-lg bg-neutral-50 p-3 dark:bg-neutral-900/40">
               <p className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400">Largest category</p>
               <p className="mt-1 text-[13px] font-bold text-[#09090b] dark:text-[#fafafa]">{plan.largestCategory?.category || 'No spending yet'}</p>
@@ -195,6 +208,8 @@ function Planner() {
           </div>
         </div>
       </div>
+
+      <CashFlowForecast forecast={data.forecast} />
     </div>
   );
 }

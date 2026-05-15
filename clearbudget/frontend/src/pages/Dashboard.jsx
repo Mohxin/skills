@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getBudgetOverview, getRecentTransactions, getSpendingByCategory, getRecurring, getGoals } from '../api';
+import { getBudgetOverview, getRecentTransactions, getSpendingByCategory, getRecurring, getGoals, getCashFlowForecast } from '../api';
 import { DashboardSkeleton } from '../components/Skeleton';
+import CashFlowForecast from '../components/CashFlowForecast';
 import { useCurrency } from '../context/CurrencyContext';
 
 function useDashboardData() {
-  const [data, setData] = useState({ overview: null, recentTransactions: [], spending: [], overBudget: [], recurring: [], goals: [] });
+  const [data, setData] = useState({ overview: null, recentTransactions: [], spending: [], overBudget: [], recurring: [], goals: [], forecast: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   useEffect(() => {
     const c = new AbortController();
-    Promise.all([getBudgetOverview(), getRecentTransactions(5), getSpendingByCategory(), getRecurring(), getGoals()])
-      .then(([o, t, s, r, g]) => {
+    Promise.all([getBudgetOverview(), getRecentTransactions(5), getSpendingByCategory(), getRecurring(), getGoals(), getCashFlowForecast(30)])
+      .then(([o, t, s, r, g, f]) => {
         if (c.signal.aborted) return;
         setData({
           overview: o.data,
@@ -20,6 +21,7 @@ function useDashboardData() {
           overBudget: s.data.filter((i) => parseFloat(i.available) < 0),
           recurring: r.data.filter((item) => item.enabled !== false),
           goals: g.data,
+          forecast: f.data,
         });
         setLoading(false);
       })
@@ -269,7 +271,7 @@ function GoalMomentum({ goals, formatCurrency }) {
 /* ---- Dashboard ---- */
 function Dashboard() {
   const { formatCurrency } = useCurrency();
-  const { overview, recentTransactions, spending, overBudget, recurring, goals, loading, error } = useDashboardData();
+  const { overview, recentTransactions, spending, overBudget, recurring, goals, forecast, loading, error } = useDashboardData();
   const monthLabel = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   if (loading) return <DashboardSkeleton />;
@@ -440,6 +442,8 @@ function Dashboard() {
           <GoalMomentum goals={activeGoals} formatCurrency={formatCurrency} />
         </div>
       </div>
+
+      <CashFlowForecast forecast={forecast} compact />
 
       {/* Two column */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 stagger">

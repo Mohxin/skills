@@ -15,6 +15,7 @@ struct DashboardView: View {
     @State private var overview: DashboardOverview?
     @State private var recurring: [APIRecurring] = []
     @State private var spending: [APISpending] = []
+    @State private var forecast: APICashFlowForecast?
     
     struct DashboardOverview {
         let totalBalance: Double
@@ -54,6 +55,10 @@ struct DashboardView: View {
                 // Stats Grid
                 if let overview {
                     statsGrid(overview)
+                }
+
+                if let forecast {
+                    CashFlowForecastCard(forecast: forecast)
                 }
                 
                 // Recent Transactions
@@ -307,6 +312,7 @@ struct DashboardView: View {
             let overview = try await service.fetchOverview()
             async let recurring = service.fetchRecurring()
             async let spending = service.fetchSpendingByCategory()
+            async let forecast = service.fetchCashFlowForecast(days: 30)
             await MainActor.run {
                 self.overview = DashboardOverview(
                     totalBalance: overview.totalBalance,
@@ -319,15 +325,164 @@ struct DashboardView: View {
 
             let loadedRecurring = try await recurring
             let loadedSpending = try await spending
+            let loadedForecast = try await forecast
 
             await MainActor.run {
                 self.recurring = loadedRecurring
                 self.spending = loadedSpending
+                self.forecast = loadedForecast
                 loading = false
             }
         } catch {
             print("Failed to load overview: \(error)")
             loading = false
+        }
+    }
+}
+
+private struct CashFlowForecastCard: View {
+    @EnvironmentObject private var currencyManager: CurrencyManager
+
+    let forecast: APICashFlowForecast
+
+    private var tint: Color {
+        switch forecast.status {
+        case "risk": return .red
+        case "tight": return .orange
+        default: return .green
+        }
+    }
+
+    private var statusTitle: String {
+        switch forecast.status {
+        case "risk": return "Risk"
+        case "tight": return "Tight"
+        default: return "Healthy"
+        }
+    }
+
+    private var lowDateText: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard let date = formatter.date(from: forecast.projectedLowDate) else { return forecast.projectedLowDate }
+        return date.formatted(.dateTime.month(.abbreviated).day())
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("30-Day Forecast")
+                        .font(.headline.weight(.semibold))
+                    Text(statusDescription)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Text(statusTitle)
+                    .font(.caption2.weight(.bold))
+                    .textCase(.uppercase)
+                    .foregroundStyle(tint)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 5)
+                    .background(tint.opacity(0.12), in: Capsule())
+            }
+
+            ForecastLine(points: forecast.points, tint: tint)
+                .frame(height: 62)
+
+            HStack(spacing: 10) {
+                forecastMetric("Safe to spend", currencyManager.format(forecast.safeToSpend), .green)
+                forecastMetric("Lowest point", currencyManager.format(forecast.projectedLowBalance), forecast.projectedLowBalance < 0 ? .red : .primary, footnote: lowDateText)
+            }
+
+            if !forecast.upcomingEvents.isEmpty {
+                VStack(spacing: 8) {
+                    ForEach(forecast.upcomingEvents.prefix(3)) { event in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(event.payee)
+                                    .font(.caption.weight(.semibold))
+                                    .lineLimit(1)
+                                Text(event.date)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Text(currencyManager.format(event.amount))
+                                .font(.caption.weight(.bold))
+                                .monospacedDigit()
+                                .foregroundStyle(event.amount < 0 ? .red : .green)
+                        }
+                    }
+                }
+                .padding(12)
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private var statusDescription: String {
+        switch forecast.status {
+        case "risk": return "Projected balance dips below zero before the month is done."
+        case "tight": return "The plan works, but the remaining cushion is thin."
+        default: return "Upcoming bills and recent spend keep a working cushion."
+        }
+    }
+
+    private func forecastMetric(_ title: String, _ value: String, _ tint: Color, footnote: String? = nil) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2.weight(.bold))
+                .textCase(.uppercase)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.subheadline.weight(.bold))
+                .monospacedDigit()
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+            if let footnote {
+                Text(footnote)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+private struct ForecastLine: View {
+    let points: [APICashFlowPoint]
+    let tint: Color
+
+    var body: some View {
+        GeometryReader { proxy in
+            let balances = points.map(\.balance)
+            let minBalance = balances.min() ?? 0
+            let maxBalance = balances.max() ?? 1
+            let range = max(maxBalance - minBalance, 1)
+
+            Path { path in
+                for (index, point) in points.enumerated() {
+                    let x = points.count > 1 ? proxy.size.width * CGFloat(index) / CGFloat(points.count - 1) : 0
+                    let normalized = CGFloat((point.balance - minBalance) / range)
+                    let y = proxy.size.height - normalized * proxy.size.height
+                    if index == 0 {
+                        path.move(to: CGPoint(x: x, y: y))
+                    } else {
+                        path.addLine(to: CGPoint(x: x, y: y))
+                    }
+                }
+            }
+            .stroke(tint, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
         }
     }
 }

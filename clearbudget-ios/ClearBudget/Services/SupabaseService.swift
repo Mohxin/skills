@@ -138,6 +138,34 @@ struct APITopCategory: Codable, Identifiable {
     let total: Double
 }
 
+struct APICashFlowForecast: Codable {
+    let days: Int
+    let startingBalance: Double
+    let dailyAverageSpend: Double
+    let committedOutflow: Double
+    let safeToSpend: Double
+    let projectedLowBalance: Double
+    let projectedLowDate: String
+    let runwayDays: Int?
+    let status: String
+    let upcomingEvents: [APICashFlowEvent]
+    let points: [APICashFlowPoint]
+}
+
+struct APICashFlowEvent: Codable, Identifiable {
+    var id: String { "\(date)-\(payee)-\(amount)" }
+    let date: String
+    let payee: String
+    let amount: Double
+    let frequency: String
+}
+
+struct APICashFlowPoint: Codable, Identifiable {
+    var id: String { date }
+    let date: String
+    let balance: Double
+}
+
 // MARK: - Service
 @MainActor
 final class SupabaseService: ObservableObject {
@@ -192,6 +220,10 @@ final class SupabaseService: ObservableObject {
 
     func fetchInsights() async throws -> APIInsights {
         try await fetch(path: "/reports/insights")
+    }
+
+    func fetchCashFlowForecast(days: Int = 30) async throws -> APICashFlowForecast {
+        try await fetch(path: "/reports/cash-flow-forecast?days=\(days)")
     }
     
     // MARK: - Create

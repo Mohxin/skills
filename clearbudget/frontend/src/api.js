@@ -50,5 +50,6 @@ export const getSpendingByCategory = () => api.get('/reports/spending-by-categor
 export const getMonthlyTrends = () => api.get('/reports/monthly-trends');
 export const getRecentTransactions = (limit = 10) => api.get(`/reports/recent-transactions?limit=${limit}`);
 export const getInsights = () => api.get('/reports/insights');
+export const getCashFlowForecast = (days = 30) => api.get(`/reports/cash-flow-forecast?days=${days}`);
 
 export default api;

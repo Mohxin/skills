@@ -13,6 +13,7 @@ struct PlannerView: View {
     @State private var recurring: [APIRecurring] = []
     @State private var goals: [APIGoal] = []
     @State private var spending: [APISpending] = []
+    @State private var forecast: APICashFlowForecast?
     @State private var errorMessage: String?
 
     private var monthlyBills: Double {
@@ -62,6 +63,7 @@ struct PlannerView: View {
                     metricsGrid
                     recommendations
                     planSnapshot
+                    forecastSection
                 }
             }
             .padding(.horizontal)
@@ -178,6 +180,58 @@ struct PlannerView: View {
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
+    private var forecastSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "30-Day Cash Flow", icon: "waveform.path.ecg")
+
+            if let forecast {
+                PlannerForecastLine(points: forecast.points, tint: forecast.status == "risk" ? .red : forecast.status == "tight" ? .orange : .green)
+                    .frame(height: 72)
+
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                    PlannerMetricCard(title: "Safe Cushion", value: currencyManager.format(forecast.safeToSpend), subtitle: "After bills and spend pace", tint: forecast.safeToSpend > 0 ? .green : .orange, icon: "checkmark.shield")
+                    PlannerMetricCard(title: "Lowest Point", value: currencyManager.format(forecast.projectedLowBalance), subtitle: forecast.projectedLowDate, tint: forecast.projectedLowBalance < 0 ? .red : .blue, icon: "arrow.down.forward")
+                }
+
+                if !forecast.upcomingEvents.isEmpty {
+                    VStack(spacing: 8) {
+                        ForEach(forecast.upcomingEvents.prefix(4)) { event in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(event.payee)
+                                        .font(.caption.weight(.semibold))
+                                        .lineLimit(1)
+                                    Text(event.date)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+
+                                Text(currencyManager.format(event.amount))
+                                    .font(.caption.weight(.bold))
+                                    .monospacedDigit()
+                                    .foregroundStyle(event.amount < 0 ? .red : .green)
+                            }
+                        }
+                    }
+                    .padding(12)
+                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+            } else {
+                Text("Forecast data will appear after recurring bills and recent transactions are available.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
+                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
     private func loadData() async {
         isLoading = true
         errorMessage = nil
@@ -187,15 +241,52 @@ struct PlannerView: View {
             async let recurring = SupabaseService.shared.fetchRecurring()
             async let goals = SupabaseService.shared.fetchGoals()
             async let spending = SupabaseService.shared.fetchSpendingByCategory()
+            async let forecast = SupabaseService.shared.fetchCashFlowForecast(days: 30)
 
             self.overview = try await overview
             self.recurring = try await recurring
             self.goals = try await goals
             self.spending = try await spending
+            self.forecast = try await forecast
             isLoading = false
         } catch {
             errorMessage = error.localizedDescription
             isLoading = false
+        }
+    }
+}
+
+private struct PlannerForecastLine: View {
+    let points: [APICashFlowPoint]
+    let tint: Color
+
+    var body: some View {
+        GeometryReader { proxy in
+            let balances = points.map(\.balance)
+            let minBalance = balances.min() ?? 0
+            let maxBalance = balances.max() ?? 1
+            let range = max(maxBalance - minBalance, 1)
+
+            ZStack(alignment: .bottom) {
+                Rectangle()
+                    .fill(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                Path { path in
+                    for (index, point) in points.enumerated() {
+                        let x = points.count > 1 ? proxy.size.width * CGFloat(index) / CGFloat(points.count - 1) : 0
+                        let normalized = CGFloat((point.balance - minBalance) / range)
+                        let y = proxy.size.height - normalized * proxy.size.height
+                        if index == 0 {
+                            path.move(to: CGPoint(x: x, y: y))
+                        } else {
+                            path.addLine(to: CGPoint(x: x, y: y))
+                        }
+                    }
+                }
+                .stroke(tint, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                .padding(10)
+            }
         }
     }
 }
