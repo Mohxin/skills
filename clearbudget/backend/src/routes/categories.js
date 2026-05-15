@@ -29,6 +29,22 @@ router.get('/groups', async (req, res) => {
   }
 });
 
+// Create category group
+router.post('/groups', async (req, res) => {
+  try {
+    const { name, icon, sort_order } = req.body;
+    const { data, error } = await supabase
+      .from('category_groups')
+      .insert({ name, icon: icon || null, sort_order: sort_order || 0 })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    res.status(201).json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get all categories
 router.get('/', async (req, res) => {
   try {

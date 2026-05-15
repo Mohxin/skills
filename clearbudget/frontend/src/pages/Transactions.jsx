@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getTransactions, createTransaction, updateTransaction, deleteTransaction, importTransactions, getAccounts, getCategories } from '../api';
+import { getTransactions, createTransaction, updateTransaction, deleteTransaction, importTransactions, getAccounts, getCategories, getCategoryGroups, createCategoryGroup, createCategory } from '../api';
 import Modal from '../components/Modal';
 import { SkeletonTable } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import { useCurrency } from '../context/CurrencyContext';
 import { readImportRows } from '../utils/transactionImport';
+import { categorizeImportedRows, defaultCategoryGroups } from '../utils/categorization';
 
 const emptyForm = { account_id: '', category_id: '', date: new Date().toISOString().split('T')[0], payee: '', memo: '', amount: '', cleared: false, type: 'expense' };
 
@@ -35,6 +36,7 @@ function Transactions() {
   const [importAccountId, setImportAccountId] = useState('');
   const [importCategoryId, setImportCategoryId] = useState('');
   const [importUpdateBalance, setImportUpdateBalance] = useState(false);
+  const [smartCategorize, setSmartCategorize] = useState(true);
   const [importing, setImporting] = useState(false);
 
   const loadData = useCallback(() => {
@@ -85,7 +87,60 @@ function Transactions() {
     setImportAccountId(accounts[0]?.id || '');
     setImportCategoryId('');
     setImportUpdateBalance(false);
+    setSmartCategorize(true);
     setShowImportModal(true);
+  };
+
+  const ensureSmartCategories = async () => {
+    const [groupsResponse, categoriesResponse] = await Promise.all([getCategoryGroups(), getCategories()]);
+    let nextGroups = groupsResponse.data || [];
+    let nextCategories = categoriesResponse.data || [];
+    const categoryNames = new Set(nextCategories.map((category) => category.name.toLowerCase()));
+
+    for (const group of defaultCategoryGroups) {
+      let savedGroup = nextGroups.find((item) => item.name.toLowerCase() === group.name.toLowerCase());
+      if (!savedGroup) {
+        const createdGroup = await createCategoryGroup({ name: group.name, icon: group.icon, sort_order: group.sort_order });
+        savedGroup = { ...createdGroup.data, categories: [] };
+        nextGroups = [...nextGroups, savedGroup];
+      }
+
+      for (const categoryName of group.categories) {
+        if (categoryNames.has(categoryName.toLowerCase())) continue;
+        const createdCategory = await createCategory({ category_group_id: savedGroup.id, name: categoryName, budgeted: 0 });
+        nextCategories = [...nextCategories, { ...createdCategory.data, group_name: savedGroup.name }];
+        categoryNames.add(categoryName.toLowerCase());
+      }
+    }
+
+    setCategories(nextCategories);
+    return nextCategories;
+  };
+
+  const applySmartCategories = async (rows, enabled = smartCategorize) => {
+    if (!enabled) return rows;
+    const availableCategories = await ensureSmartCategories();
+    return categorizeImportedRows(rows, availableCategories, transactions);
+  };
+
+  const updateImportRowCategory = (index, categoryId) => {
+    const category = categories.find((item) => item.id === parseInt(categoryId, 10));
+    setImportRows((rows) => rows.map((row, rowIndex) => (
+      rowIndex === index
+        ? { ...row, category_id: category?.id || null, category_name: category?.name || '', confidence: category ? 'manual' : '' }
+        : row
+    )));
+  };
+
+  const rerunSmartCategories = async () => {
+    if (!importRows.length) return;
+    try {
+      const categorized = await applySmartCategories(importRows.map(({ category_id, category_name, confidence, ...row }) => row), true);
+      setImportRows(categorized);
+      toast('Categories suggested', 'success');
+    } catch (err) {
+      toast('Could not suggest categories: ' + err.message, 'error');
+    }
   };
 
   const handleImportFile = async (event) => {
@@ -93,10 +148,11 @@ function Transactions() {
     if (!file) return;
     try {
       const normalized = await readImportRows(file);
+      const categorized = await applySmartCategories(normalized);
       setImportFileName(file.name);
-      setImportRows(normalized);
-      if (!normalized.length) toast('No valid transactions found. Check date and amount columns.', 'error');
-      else toast(`Found ${normalized.length} transaction${normalized.length === 1 ? '' : 's'}`, 'success');
+      setImportRows(categorized);
+      if (!categorized.length) toast('No valid transactions found. Check date and amount columns.', 'error');
+      else toast(`Found ${categorized.length} transaction${categorized.length === 1 ? '' : 's'} with smart categories`, 'success');
     } catch (err) {
       toast('Failed to read file: ' + err.message, 'error');
     } finally {
@@ -121,7 +177,7 @@ function Transactions() {
         account_id: parseInt(importAccountId, 10),
         category_id: importCategoryId ? parseInt(importCategoryId, 10) : null,
         update_balance: importUpdateBalance,
-        transactions: importRows.map(({ source, ...row }) => row),
+        transactions: importRows.map(({ source, category_name, confidence, ...row }) => row),
       });
       toast(`Imported ${res.data.imported} transaction${res.data.imported === 1 ? '' : 's'}`, 'success');
       setShowImportModal(false);
@@ -330,6 +386,27 @@ function Transactions() {
             </div>
           </div>
 
+          <label className="flex items-start gap-2 rounded-lg bg-emerald-50/70 p-3 text-[12px] text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-200">
+            <input
+              type="checkbox"
+              className="mt-0.5 rounded border-emerald-300 dark:border-emerald-700"
+              checked={smartCategorize}
+              onChange={async (event) => {
+                setSmartCategorize(event.target.checked);
+                if (event.target.checked && importRows.length) await rerunSmartCategories();
+              }}
+            />
+            <span className="flex-1">
+              Smart categorize imported transactions.
+              <span className="mt-0.5 block text-[11px] text-emerald-700/80 dark:text-emerald-300/80">Creates a clean starter budget category set if needed, then matches merchants like Willys, ICA, SL, Vattenfall, Amazon, OpenAI, and more.</span>
+            </span>
+            {importRows.length > 0 && smartCategorize && (
+              <button type="button" className="text-[11px] font-semibold text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-300" onClick={rerunSmartCategories}>
+                Re-run
+              </button>
+            )}
+          </label>
+
           <label className="flex items-start gap-2 rounded-lg bg-neutral-50 p-3 text-[12px] text-neutral-600 dark:bg-neutral-900/40 dark:text-neutral-300">
             <input type="checkbox" className="mt-0.5 rounded border-neutral-300 dark:border-neutral-600" checked={importUpdateBalance} onChange={(e) => setImportUpdateBalance(e.target.checked)} />
             <span>
@@ -341,18 +418,43 @@ function Transactions() {
           <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
             <div className="flex items-center justify-between border-b border-neutral-100 px-3 py-2 dark:border-neutral-800">
               <p className="text-[12px] font-semibold text-[#09090b] dark:text-[#fafafa]">Preview</p>
-              <p className="text-[11px] text-neutral-500 dark:text-neutral-400">{importRows.length} row{importRows.length === 1 ? '' : 's'}</p>
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                {importRows.length} row{importRows.length === 1 ? '' : 's'}
+                {importRows.length > 0 ? `, ${importRows.filter((row) => row.category_id).length} categorized` : ''}
+              </p>
             </div>
-            <div className="max-h-56 overflow-auto">
+            <div className="max-h-72 overflow-auto">
               {importRows.length === 0 ? (
                 <p className="p-4 text-center text-[12px] text-neutral-500 dark:text-neutral-400">Choose a file to preview transactions.</p>
               ) : (
                 <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Payee</th>
+                      <th>Category</th>
+                      <th className="text-right">Amount</th>
+                    </tr>
+                  </thead>
                   <tbody>
-                    {importRows.slice(0, 8).map((row, index) => (
+                    {importRows.slice(0, 12).map((row, index) => (
                       <tr key={`${row.date}-${row.payee}-${index}`}>
                         <td className="whitespace-nowrap text-[11px] text-neutral-500">{row.date}</td>
                         <td className="text-[12px] font-medium text-[#09090b] dark:text-[#fafafa]">{row.payee}</td>
+                        <td>
+                          <select
+                            className="input input-sm min-w-[150px]"
+                            value={row.category_id || ''}
+                            onChange={(event) => updateImportRowCategory(index, event.target.value)}
+                            aria-label={`Category for ${row.payee}`}
+                          >
+                            <option value="">Uncategorized</option>
+                            {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+                          </select>
+                          {row.confidence && row.category_id && (
+                            <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.06em] text-neutral-400 dark:text-neutral-500">{row.confidence}</span>
+                          )}
+                        </td>
                         <td className={`text-right text-[12px] font-bold tabular-nums ${row.amount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{formatCurrency(row.amount)}</td>
                       </tr>
                     ))}

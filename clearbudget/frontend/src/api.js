@@ -25,6 +25,7 @@ export const deleteTransaction = (id) => api.delete(`/transactions/${id}`);
 // Categories
 export const getCategoryGroups = () => api.get('/categories/groups');
 export const getCategories = () => api.get('/categories');
+export const createCategoryGroup = (data) => api.post('/categories/groups', data);
 export const createCategory = (data) => api.post('/categories', data);
 export const updateCategoryBudget = (id, data) => api.put(`/categories/${id}/budget`, data);
 export const updateCategory = (id, data) => api.put(`/categories/${id}`, data);

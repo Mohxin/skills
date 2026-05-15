@@ -93,6 +93,12 @@ export default async function handler(req, res) {
         if (ce) return serverErr(res, ce.message);
         return ok(res, groups.map(g => ({ ...g, categories: cats.filter(c => c.category_group_id === g.id) })));
       }
+      if (req.method === 'POST' && path[1] === 'groups') {
+        const body = await parseBody(req);
+        const { data, error: e } = await supabase.from('category_groups').insert({ name: body.name, icon: body.icon || null, sort_order: body.sort_order || 0 }).select().single();
+        if (e) return serverErr(res, e.message);
+        return created(res, data);
+      }
       if (req.method === 'GET') {
         const { data, error: e } = await supabase.from('categories').select('*, category_groups(name)').order('id');
         if (e) return serverErr(res, e.message);
