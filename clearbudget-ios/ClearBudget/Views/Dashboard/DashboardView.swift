@@ -15,6 +15,7 @@ struct DashboardView: View {
     @State private var overview: DashboardOverview?
     @State private var recurring: [APIRecurring] = []
     @State private var spending: [APISpending] = []
+    @State private var goals: [APIGoal] = []
     @State private var forecast: APICashFlowForecast?
     
     struct DashboardOverview {
@@ -45,6 +46,12 @@ struct DashboardView: View {
     private var overspentCategory: APISpending? {
         spending.first { $0.available < 0 }
     }
+
+    private var goalGap: Double {
+        goals.reduce(0) { total, goal in
+            total + max(goal.targetAmount - goal.currentAmount, 0)
+        }
+    }
     
     var body: some View {
         ScrollView {
@@ -55,6 +62,14 @@ struct DashboardView: View {
                 // Stats Grid
                 if let overview {
                     statsGrid(overview)
+                    ExecutiveBriefCard(
+                        score: readinessScore(for: overview),
+                        forecast: forecast,
+                        overBudgetCount: spending.filter { $0.available < 0 }.count,
+                        goalGap: goalGap,
+                        monthlyBills: monthlyBills,
+                        available: overview.available
+                    )
                 }
 
                 if let forecast {
@@ -237,6 +252,21 @@ struct DashboardView: View {
         formatter.dateFormat = "MMMM yyyy"
         return formatter.string(from: .now)
     }
+
+    private func readinessScore(for overview: DashboardOverview) -> Int {
+        let forecastPenalty: Double
+        switch forecast?.status {
+        case "risk": forecastPenalty = 18
+        case "tight": forecastPenalty = 8
+        case "healthy": forecastPenalty = -5
+        default: forecastPenalty = 0
+        }
+
+        let overBudgetPenalty = Double(min(spending.filter { $0.available < 0 }.count * 8, 24))
+        let utilizationPenalty = budgetUtilization * 35
+        let readyPenalty = overview.toBeBudgeted < 0 ? 18.0 : 0.0
+        return max(0, min(100, Int((100 - utilizationPenalty - overBudgetPenalty - readyPenalty - forecastPenalty).rounded())))
+    }
     
     // MARK: - Stats
     @ViewBuilder
@@ -310,9 +340,6 @@ struct DashboardView: View {
         do {
             let service = SupabaseService.shared
             let overview = try await service.fetchOverview()
-            async let recurring = service.fetchRecurring()
-            async let spending = service.fetchSpendingByCategory()
-            async let forecast = service.fetchCashFlowForecast(days: 30)
             await MainActor.run {
                 self.overview = DashboardOverview(
                     totalBalance: overview.totalBalance,
@@ -323,20 +350,137 @@ struct DashboardView: View {
                 )
             }
 
-            let loadedRecurring = try await recurring
-            let loadedSpending = try await spending
-            let loadedForecast = try await forecast
-
-            await MainActor.run {
-                self.recurring = loadedRecurring
-                self.spending = loadedSpending
-                self.forecast = loadedForecast
-                loading = false
+            do {
+                self.recurring = try await service.fetchRecurring()
+            } catch {
+                self.recurring = []
             }
+
+            do {
+                self.spending = try await service.fetchSpendingByCategory()
+            } catch {
+                self.spending = []
+            }
+
+            do {
+                self.goals = try await service.fetchGoals()
+            } catch {
+                self.goals = []
+            }
+
+            do {
+                self.forecast = try await service.fetchCashFlowForecast(days: 30)
+            } catch {
+                self.forecast = nil
+            }
+
+            loading = false
         } catch {
             print("Failed to load overview: \(error)")
             loading = false
         }
+    }
+}
+
+private struct ExecutiveBriefCard: View {
+    @EnvironmentObject private var currencyManager: CurrencyManager
+
+    let score: Int
+    let forecast: APICashFlowForecast?
+    let overBudgetCount: Int
+    let goalGap: Double
+    let monthlyBills: Double
+    let available: Double
+
+    private var scoreTint: Color {
+        if score >= 78 { return .green }
+        if score >= 55 { return .orange }
+        return .red
+    }
+
+    private var nextAction: String {
+        if overBudgetCount > 0 {
+            return "Cover overspent categories before assigning surplus."
+        }
+
+        if forecast?.status == "risk" {
+            return "Reduce flexible spend or move cash before the projected low date."
+        }
+
+        if goalGap > 0 {
+            return "Turn surplus into automatic goal funding."
+        }
+
+        return "Keep the plan on autopilot and review upcoming bills weekly."
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Executive Brief")
+                        .font(.caption2.weight(.bold))
+                        .textCase(.uppercase)
+                        .foregroundStyle(.secondary)
+                    Text("Financial readiness")
+                        .font(.headline.weight(.semibold))
+                }
+
+                Spacer()
+
+                Text("\(score)")
+                    .font(.system(size: 42, weight: .black, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(scoreTint)
+            }
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                executiveMetric("Budget risk", overBudgetCount == 0 ? "Covered" : "\(overBudgetCount) over", overBudgetCount == 0 ? .green : .red)
+                executiveMetric("Bill load", currencyManager.format(monthlyBills), monthlyBills > max(available, 1) ? .orange : .primary)
+                executiveMetric("Goal capital", currencyManager.format(goalGap), goalGap > 0 ? .orange : .green)
+                executiveMetric("Cash floor", forecast.map { currencyManager.format($0.projectedLowBalance) } ?? "Pending", (forecast?.projectedLowBalance ?? 0) < 0 ? .red : .green)
+            }
+
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "sparkles")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.orange)
+                    .frame(width: 28, height: 28)
+                    .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Next best action")
+                        .font(.caption.weight(.semibold))
+                    Text(nextAction)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(12)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func executiveMetric(_ title: String, _ value: String, _ tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2.weight(.bold))
+                .textCase(.uppercase)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.caption.weight(.bold))
+                .monospacedDigit()
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 

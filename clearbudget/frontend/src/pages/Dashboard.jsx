@@ -275,6 +275,80 @@ function GoalMomentum({ goals, formatCurrency }) {
   );
 }
 
+function ExecutiveBrief({ score, forecast, overBudget, goals, monthlyBills, available, formatCurrency }) {
+  const goalGap = goals.reduce((sum, goal) => {
+    const target = parseFloat(goal.target_amount) || 0;
+    const current = parseFloat(goal.current_amount) || 0;
+    return sum + Math.max(target - current, 0);
+  }, 0);
+  const forecastStatus = forecast?.status || 'unknown';
+  const readiness = Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round(
+        score
+        - (forecastStatus === 'risk' ? 18 : forecastStatus === 'tight' ? 8 : 0)
+        - Math.min(overBudget.length * 8, 24)
+        + (forecastStatus === 'healthy' ? 5 : 0)
+      )
+    )
+  );
+  const scoreTone = readiness >= 78 ? 'text-emerald-700 dark:text-emerald-300' : readiness >= 55 ? 'text-amber-700 dark:text-amber-300' : 'text-red-700 dark:text-red-300';
+  const levers = [
+    overBudget.length
+      ? { label: 'Budget risk', value: `${overBudget.length} categor${overBudget.length === 1 ? 'y' : 'ies'} over`, tone: 'danger' }
+      : { label: 'Budget risk', value: 'Covered', tone: 'good' },
+    { label: 'Bill load', value: formatCurrency(monthlyBills), tone: monthlyBills > Math.max(available, 1) ? 'warning' : 'neutral' },
+    { label: 'Goal capital', value: formatCurrency(goalGap), tone: goalGap > 0 ? 'warning' : 'good' },
+    { label: 'Cash floor', value: forecast ? formatCurrency(forecast.projectedLowBalance || 0) : 'Pending', tone: forecast?.projectedLowBalance < 0 ? 'danger' : 'good' },
+  ];
+  const nextAction = overBudget.length
+    ? `Cover ${overBudget[0].category} before moving money elsewhere.`
+    : forecastStatus === 'risk'
+      ? 'Reduce flexible spend or move cash before the projected low date.'
+      : goalGap > 0
+        ? 'Turn surplus into automatic goal funding.'
+        : 'Keep the plan on autopilot and review upcoming bills weekly.';
+
+  const toneClasses = {
+    good: 'text-emerald-700 dark:text-emerald-300',
+    warning: 'text-amber-700 dark:text-amber-300',
+    danger: 'text-red-700 dark:text-red-300',
+    neutral: 'text-[#09090b] dark:text-[#fafafa]',
+  };
+
+  return (
+    <div className="card overflow-hidden">
+      <div className="grid gap-4 p-4 lg:grid-cols-[220px_minmax(0,1fr)_280px] lg:p-5">
+        <div className="rounded-xl border border-neutral-200/70 bg-neutral-50/80 p-4 dark:border-neutral-800/70 dark:bg-neutral-900/35">
+          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-neutral-400 dark:text-neutral-500">Executive Brief</p>
+          <p className={`mt-2 text-[48px] font-black leading-none tracking-[-0.06em] tabular-nums ${scoreTone}`}>{readiness}</p>
+          <p className="mt-2 text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">Readiness score blending budget health, cash-flow risk, and goal pressure.</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          {levers.map((item) => (
+            <div key={item.label} className="metric-tile">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-400 dark:text-neutral-500">{item.label}</p>
+              <p className={`mt-1 text-[15px] font-black tracking-[-0.03em] tabular-nums ${toneClasses[item.tone]}`}>{item.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-xl border border-neutral-200/70 bg-white/70 p-4 dark:border-neutral-800/70 dark:bg-neutral-950/30">
+          <p className="text-[11px] font-semibold text-[#09090b] dark:text-[#fafafa]">Next best action</p>
+          <p className="mt-2 text-[12px] leading-relaxed text-neutral-600 dark:text-neutral-300">{nextAction}</p>
+          <div className="mt-3 flex gap-2">
+            <Link to="/planner" className="btn-primary flex-1 px-3 py-2 text-[12px]">Open Planner</Link>
+            <Link to="/insights" className="btn-secondary flex-1 px-3 py-2 text-[12px]">Insights</Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---- Dashboard ---- */
 function Dashboard() {
   const { formatCurrency } = useCurrency();
@@ -441,6 +515,16 @@ function Dashboard() {
 
       {/* Alert */}
       {overBudget.length > 0 && <BudgetAlert categories={overBudget} formatCurrency={formatCurrency} />}
+
+      <ExecutiveBrief
+        score={healthScore}
+        forecast={forecast}
+        overBudget={overBudget}
+        goals={goals}
+        monthlyBills={monthlyBills}
+        available={available}
+        formatCurrency={formatCurrency}
+      />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
         <PriorityPanel priorities={priorities} />
