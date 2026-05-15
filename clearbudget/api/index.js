@@ -36,6 +36,10 @@ async function updateCatActivity(id, delta) {
 
 const txSelect = '*, accounts(name), categories(name)';
 const fmtTx = (tx) => ({ ...tx, account_name: tx.accounts?.name, category_name: tx.categories?.name, accounts: undefined, categories: undefined });
+const toNumber = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+};
 
 export default async function handler(req, res) {
   // Parse URL path
@@ -134,6 +138,52 @@ export default async function handler(req, res) {
       }
       if (req.method === 'POST') {
         const body = await parseBody(req);
+        if (path[1] === 'import') {
+          const accountId = parseInt(body.account_id, 10);
+          const defaultCategoryId = body.category_id ? parseInt(body.category_id, 10) : null;
+          const transactions = Array.isArray(body.transactions) ? body.transactions : [];
+
+          if (!accountId) return serverErr(res, 'account_id is required', 400);
+          if (!transactions.length) return serverErr(res, 'transactions must contain at least one row', 400);
+
+          const rows = transactions.map((tx) => {
+            const amount = toNumber(tx.amount);
+            const date = String(tx.date || '').slice(0, 10);
+            if (!date || !amount) return null;
+            return {
+              account_id: accountId,
+              category_id: tx.category_id ? parseInt(tx.category_id, 10) : defaultCategoryId,
+              date,
+              payee: tx.payee || 'Imported transaction',
+              memo: tx.memo || null,
+              amount,
+              cleared: tx.cleared !== false,
+            };
+          }).filter(Boolean);
+
+          if (!rows.length) return serverErr(res, 'No valid transactions found to import', 400);
+
+          const { data: imported, error: importError } = await supabase
+            .from('transactions')
+            .insert(rows)
+            .select(txSelect);
+          if (importError) return serverErr(res, importError.message);
+
+          if (body.update_balance) {
+            const accountDelta = rows.reduce((sum, tx) => sum + tx.amount, 0);
+            await updateAccBalance(accountId, accountDelta);
+          }
+
+          const categoryDeltas = rows.reduce((map, tx) => {
+            if (tx.category_id) map[tx.category_id] = (map[tx.category_id] || 0) + tx.amount;
+            return map;
+          }, {});
+          await Promise.all(Object.entries(categoryDeltas).map(([categoryId, delta]) => updateCatActivity(categoryId, delta)));
+
+          const formatted = imported.map(fmtTx);
+          return created(res, { imported: formatted.length, transactions: formatted });
+        }
+
         const { data: tx, error: te } = await supabase.from('transactions').insert({ account_id: body.account_id, category_id: body.category_id || null, date: body.date, payee: body.payee, memo: body.memo, amount: body.amount, cleared: body.cleared || false }).select().single();
         if (te) return serverErr(res, te.message);
         await updateAccBalance(body.account_id, body.amount);
