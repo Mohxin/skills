@@ -1,118 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import readXlsxFile from 'read-excel-file/browser';
 import { getTransactions, createTransaction, updateTransaction, deleteTransaction, importTransactions, getAccounts, getCategories } from '../api';
 import Modal from '../components/Modal';
 import { SkeletonTable } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import { useCurrency } from '../context/CurrencyContext';
+import { readImportRows } from '../utils/transactionImport';
 
 const emptyForm = { account_id: '', category_id: '', date: new Date().toISOString().split('T')[0], payee: '', memo: '', amount: '', cleared: false, type: 'expense' };
-
-const findColumn = (row, candidates) => {
-  const keys = Object.keys(row);
-  return keys.find((key) => {
-    const normalized = key.toLowerCase().replace(/[^a-zåäö0-9]/g, '');
-    return candidates.some((candidate) => normalized.includes(candidate));
-  });
-};
-
-const parseNumber = (value) => {
-  if (typeof value === 'number') return value;
-  const cleaned = String(value || '')
-    .replace(/\s/g, '')
-    .replace(/sek|kr/gi, '')
-    .replace(/[^\d,.-]/g, '');
-  if (!cleaned) return 0;
-  const decimal = cleaned.includes(',') && cleaned.lastIndexOf(',') > cleaned.lastIndexOf('.') ? cleaned.replace(/\./g, '').replace(',', '.') : cleaned.replace(/,/g, '');
-  return Number(decimal) || 0;
-};
-
-const parseDate = (value) => {
-  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString().split('T')[0];
-  if (typeof value === 'number') {
-    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
-    const date = new Date(excelEpoch.getTime() + value * 86400000);
-    if (!Number.isNaN(date.getTime())) return date.toISOString().split('T')[0];
-  }
-  const text = String(value || '').trim();
-  if (!text) return '';
-  const direct = new Date(text);
-  if (!Number.isNaN(direct.getTime())) return direct.toISOString().split('T')[0];
-  const match = text.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/);
-  if (match) {
-    const [, day, month, year] = match;
-    const fullYear = year.length === 2 ? `20${year}` : year;
-    return `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-  }
-  return '';
-};
-
-const parseDelimitedText = (text) => {
-  const delimiter = text.includes(';') && !text.includes(',') ? ';' : ',';
-  const rows = [];
-  let cell = '';
-  let row = [];
-  let quoted = false;
-
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
-    const next = text[index + 1];
-    if (char === '"' && quoted && next === '"') {
-      cell += '"';
-      index += 1;
-    } else if (char === '"') {
-      quoted = !quoted;
-    } else if (char === delimiter && !quoted) {
-      row.push(cell);
-      cell = '';
-    } else if ((char === '\n' || char === '\r') && !quoted) {
-      if (char === '\r' && next === '\n') index += 1;
-      row.push(cell);
-      if (row.some((value) => String(value).trim())) rows.push(row);
-      row = [];
-      cell = '';
-    } else {
-      cell += char;
-    }
-  }
-
-  row.push(cell);
-  if (row.some((value) => String(value).trim())) rows.push(row);
-  return rows;
-};
-
-const rowsToObjects = (rows) => {
-  const [headers = [], ...body] = rows;
-  return body.map((row) => headers.reduce((object, header, index) => {
-    object[String(header || `Column ${index + 1}`).trim()] = row[index] ?? '';
-    return object;
-  }, {}));
-};
-
-const normalizeImportedRows = (rows) => {
-  if (!rows.length) return [];
-  const sample = rows[0];
-  const dateKey = findColumn(sample, ['date', 'datum', 'bokforingsdag', 'transaktionsdatum']);
-  const payeeKey = findColumn(sample, ['payee', 'merchant', 'description', 'beskrivning', 'text', 'mottagare', 'avsandare', 'namn']);
-  const memoKey = findColumn(sample, ['memo', 'note', 'message', 'meddelande', 'referens']);
-  const amountKey = findColumn(sample, ['amount', 'belopp', 'summa']);
-  const debitKey = findColumn(sample, ['debit', 'uttag', 'withdrawal']);
-  const creditKey = findColumn(sample, ['credit', 'insattning', 'deposit']);
-
-  return rows.map((row) => {
-    const debit = debitKey ? Math.abs(parseNumber(row[debitKey])) : 0;
-    const credit = creditKey ? Math.abs(parseNumber(row[creditKey])) : 0;
-    const amount = amountKey ? parseNumber(row[amountKey]) : credit - debit;
-    return {
-      date: parseDate(row[dateKey]),
-      payee: String(row[payeeKey] || 'Imported transaction').trim(),
-      memo: String(row[memoKey] || '').trim(),
-      amount,
-      cleared: true,
-      source: row,
-    };
-  }).filter((row) => row.date && row.amount);
-};
 
 function exportToCSV(txns) {
   const rows = txns.map((t) => [t.date, t.payee || '', t.category_name || 'Uncategorized', t.memo || '', t.amount, t.account_name || '', t.cleared ? 'Yes' : 'No']);
@@ -198,11 +92,7 @@ function Transactions() {
     const file = event.target.files?.[0];
     if (!file) return;
     try {
-      const isDelimited = /\.(csv|txt)$/i.test(file.name);
-      const rawRows = isDelimited
-        ? rowsToObjects(parseDelimitedText(await file.text()))
-        : rowsToObjects(await readXlsxFile(file));
-      const normalized = normalizeImportedRows(rawRows).slice(0, 500);
+      const normalized = await readImportRows(file);
       setImportFileName(file.name);
       setImportRows(normalized);
       if (!normalized.length) toast('No valid transactions found. Check date and amount columns.', 'error');
@@ -418,7 +308,7 @@ function Transactions() {
               Choose Excel or CSV
             </label>
             <p className="mt-2 text-[11px] text-neutral-500 dark:text-neutral-400">
-              Supports common bank exports with date, payee/description, amount, debit, or credit columns.
+              Supports Handelsbanken and common bank exports with date, text/description, amount, debit, or credit columns.
             </p>
             {importFileName && <p className="mt-2 text-[11px] font-semibold text-[#09090b] dark:text-[#fafafa]">{importFileName}</p>}
           </div>
