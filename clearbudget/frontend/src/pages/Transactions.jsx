@@ -143,6 +143,8 @@ function Transactions() {
     }
   };
 
+  const stripImportMetadata = ({ source, category_name, confidence, ...row }) => row;
+
   const handleImportFile = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -173,11 +175,14 @@ function Transactions() {
 
     setImporting(true);
     try {
+      const rowsToImport = smartCategorize
+        ? await applySmartCategories(importRows.map(stripImportMetadata), true)
+        : importRows;
       const res = await importTransactions({
         account_id: parseInt(importAccountId, 10),
         category_id: importCategoryId ? parseInt(importCategoryId, 10) : null,
         update_balance: importUpdateBalance,
-        transactions: importRows.map(({ source, category_name, confidence, ...row }) => row),
+        transactions: rowsToImport.map(stripImportMetadata),
       });
       toast(`Imported ${res.data.imported} transaction${res.data.imported === 1 ? '' : 's'}`, 'success');
       setShowImportModal(false);

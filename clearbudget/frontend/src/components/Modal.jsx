@@ -3,6 +3,11 @@ import { useEffect, useRef } from 'react';
 function Modal({ isOpen, onClose, title, children, size = 'md' }) {
   const overlayRef = useRef(null);
   const modalRef = useRef(null);
+  const closeRef = useRef(onClose);
+
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -10,7 +15,7 @@ function Modal({ isOpen, onClose, title, children, size = 'md' }) {
     // Trap focus inside modal
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        onClose();
+        closeRef.current();
         return;
       }
 
@@ -39,14 +44,14 @@ function Modal({ isOpen, onClose, title, children, size = 'md' }) {
 
     // Focus first element
     setTimeout(() => {
-      modalRef.current?.querySelector('input, button, select')?.focus();
+      modalRef.current?.querySelector('[data-modal-body] input, [data-modal-body] select, [data-modal-body] textarea, [data-modal-body] button')?.focus();
     }, 100);
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -61,7 +66,7 @@ function Modal({ isOpen, onClose, title, children, size = 'md' }) {
     <div
       ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      onClick={(e) => e.target === overlayRef.current && onClose()}
+      onClick={(e) => e.target === overlayRef.current && closeRef.current()}
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
@@ -73,7 +78,7 @@ function Modal({ isOpen, onClose, title, children, size = 'md' }) {
         <div className="sticky top-0 bg-white dark:bg-surface-800 px-6 py-4 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between rounded-t-2xl z-10">
           <h2 id="modal-title" className="text-xl font-bold text-surface-900 dark:text-surface-50">{title}</h2>
           <button
-            onClick={onClose}
+            onClick={() => closeRef.current()}
             className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors"
             aria-label="Close modal"
           >
@@ -82,7 +87,7 @@ function Modal({ isOpen, onClose, title, children, size = 'md' }) {
             </svg>
           </button>
         </div>
-        <div className="p-6">
+        <div className="p-6" data-modal-body>
           {children}
         </div>
       </div>

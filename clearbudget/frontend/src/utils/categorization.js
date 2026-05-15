@@ -44,16 +44,17 @@ const categoryRules = [
   { category: 'Insurance', patterns: ['forsakring', 'if skadefors', 'cardif', 'trygg hansa', 'folksam', 'insurance'] },
   { category: 'Healthcare', patterns: ['apotek', 'varden', 'doktor', 'tandlakare', 'pharmacy', 'medical', 'dentist', 'cvs'] },
 
-  { category: 'Food & Coffee', patterns: ['demiatti', 'tazagrill', 'mangal', 'mcd', 'cafe', 'kryddo', 'rattviksglass', 'restaurant', 'starbucks', 'pizza', 'sushi', 'coffee', 'grill'] },
+  { category: 'Food & Coffee', patterns: ['demiatti', 'tazagrill', 'mangal', 'mcd', 'cafe', 'gjuthuset', 'kryddo', 'rattviksglass', 'restaurant', 'starbucks', 'pizza', 'sushi', 'coffee', 'grill'] },
   { category: 'Shopping', patterns: ['clas ohl', 'clasohl', 'amazon', 'jula', 'biltema', 'target', 'nike', 'best buy', 'shopping', 'store'] },
   { category: 'Subscriptions & Software', patterns: ['openai', 'chatgpt', 'pdfeditor', 'netflix', 'spotify', 'icloud', 'youtube', 'subscription', 'software', 'apple com bill'] },
   { category: 'Entertainment', patterns: ['steam', 'bio', 'cinema', 'amc', 'playstation', 'entertainment', 'game'] },
   { category: 'Travel', patterns: ['booking', 'airbnb', 'hotel', 'sas', 'norwegian', 'ryanair', 'travel'] },
 
-  { category: 'Transfers', patterns: ['overf', 'overforing', 'wise', 'ziklo', 'transfer', 'swish', 'mobil', 'kontanten', 'atm'] },
+  { category: 'Transfers', patterns: ['overf', 'overforing', 'wise', 'ziklo', 'muzafer mohame', 'transfer', 'swish', 'mobil', 'kontanten', 'atm'] },
   { category: 'Savings & Investments', patterns: ['nordnet', 'avanza', 'fidelity', 'isk', 'investment', 'savings'] },
-  { category: 'Fees & Memberships', patterns: ['unionen', 'akassa', 'avgift', 'fee', 'membership', 'biblioteket'] },
-  { category: 'Donations', patterns: ['islamic relief', 'edhi', 'charity', 'donation'] },
+  { category: 'Fees & Memberships', patterns: ['ikus', 'ba4', 'unionen', 'akassa', 'avgift', 'fee', 'membership', 'biblioteket'] },
+  { category: 'Donations', patterns: ['islamic relief', 'edhi', 'united brother', 'charity', 'donation'] },
+  { category: 'Bills & Utilities', patterns: ['visma amili', 'riverty', 'arvat'] },
 ];
 
 const buildCategoryLookup = (categories) => categories.reduce((lookup, category) => {
@@ -61,11 +62,15 @@ const buildCategoryLookup = (categories) => categories.reduce((lookup, category)
   return lookup;
 }, {});
 
-const buildMerchantHistory = (transactions) => transactions.reduce((history, transaction) => {
-  if (!transaction.payee || !transaction.category_id) return history;
-  history[normalize(transaction.payee)] = transaction.category_id;
-  return history;
-}, {});
+const buildMerchantHistory = (transactions, categories) => {
+  const uncategorized = categories.find((category) => normalize(category.name) === 'uncategorized');
+  return transactions.reduce((history, transaction) => {
+    if (!transaction.payee || !transaction.category_id) return history;
+    if (uncategorized && transaction.category_id === uncategorized.id) return history;
+    history[normalize(transaction.payee)] = transaction.category_id;
+    return history;
+  }, {});
+};
 
 const findCategoryByName = (categoryName, lookup) => lookup[normalize(categoryName)] || null;
 
@@ -81,7 +86,7 @@ const matchRule = (row) => {
 
 export const categorizeTransaction = (row, categories, transactions = []) => {
   const categoryLookup = buildCategoryLookup(categories);
-  const merchantHistory = buildMerchantHistory(transactions);
+  const merchantHistory = buildMerchantHistory(transactions, categories);
   const exactMerchantMatch = merchantHistory[normalize(row.payee)];
   if (exactMerchantMatch) {
     const category = categories.find((item) => item.id === exactMerchantMatch);
