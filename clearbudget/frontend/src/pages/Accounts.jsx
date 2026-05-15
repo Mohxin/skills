@@ -10,6 +10,7 @@ const accountStyles = {
   savings: { gradient: 'from-emerald-500 to-green-600' },
   creditCard: { gradient: 'from-violet-500 to-purple-600' },
   cash: { gradient: 'from-amber-500 to-orange-500' },
+  investment: { gradient: 'from-blue-500 to-cyan-600' },
 };
 
 function Accounts() {
@@ -69,7 +70,7 @@ function Accounts() {
         </div>
         <button className="btn-primary text-[12px] px-3 py-[7px] self-start" onClick={() => openModal()}>
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-          Add Account
+          Add Real Account
         </button>
       </div>
 
@@ -86,8 +87,8 @@ function Accounts() {
             <svg className="w-8 h-8 text-neutral-300 dark:text-neutral-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
           </div>
           <h3 className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa]">No accounts yet</h3>
-          <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">Add your first account to start tracking.</p>
-          <button className="btn-primary mt-4 text-[12px] px-3 py-[7px]" onClick={() => openModal()}>Add Account</button>
+          <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">Add your bank, card, cash, or investment account with its real current balance.</p>
+          <button className="btn-primary mt-4 text-[12px] px-3 py-[7px]" onClick={() => openModal()}>Add Real Account</button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 stagger">
@@ -120,8 +121,12 @@ function Accounts() {
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingAcc ? 'Edit Account' : 'Add Account'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div><label className="block text-[12px] font-medium text-neutral-600 dark:text-neutral-400 mb-1.5">Name</label><input type="text" className="input" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g., Chase Checking" required /></div>
-          <div><label className="block text-[12px] font-medium text-neutral-600 dark:text-neutral-400 mb-1.5">Type</label><select className="input" value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })}><option value="checking">Checking</option><option value="savings">Savings</option><option value="creditCard">Credit Card</option><option value="cash">Cash</option></select></div>
-          <div><label className="block text-[12px] font-medium text-neutral-600 dark:text-neutral-400 mb-1.5">Starting Balance</label><input type="number" step="0.01" className="input" value={formData.balance} onChange={(e) => setFormData({ ...formData, balance: e.target.value })} placeholder="0.00" /></div>
+          <div><label className="block text-[12px] font-medium text-neutral-600 dark:text-neutral-400 mb-1.5">Type</label><select className="input" value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })}><option value="checking">Checking</option><option value="savings">Savings</option><option value="creditCard">Credit Card</option><option value="cash">Cash</option><option value="investment">Investment / brokerage</option></select></div>
+          <div>
+            <label className="block text-[12px] font-medium text-neutral-600 dark:text-neutral-400 mb-1.5">Current Balance</label>
+            <input type="number" step="0.01" className="input" value={formData.balance} onChange={(e) => setFormData({ ...formData, balance: e.target.value })} placeholder="0.00" />
+            <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">Use the real balance from your bank, Nordnet, Avanza, or card statement. Transaction imports can leave this balance unchanged.</p>
+          </div>
           <div className="flex justify-end gap-2 pt-3 border-t border-neutral-100 dark:border-neutral-800">
             <button type="button" className="btn-secondary text-[12px] px-3 py-[7px]" onClick={() => setShowModal(false)}>Cancel</button>
             <button type="submit" className="btn-primary text-[12px] px-3 py-[7px]" disabled={saving}>{saving ? 'Saving...' : editingAcc ? 'Update' : 'Add'}</button>

@@ -237,11 +237,11 @@ final class SupabaseService: ObservableObject {
     
     // MARK: - Update
     func updateTransaction(_ id: Int, _ tx: TransactionUpdateRequest) async throws -> APITransaction {
-        try await put(path: "/transactions?id=\(id)", body: tx)
+        try await put(path: "/transactions/\(id)", body: tx)
     }
     
     func deleteTransaction(_ id: Int) async throws {
-        try await delete(path: "/transactions?id=\(id)")
+        try await delete(path: "/transactions/\(id)")
     }
     
     func updateCategoryBudget(_ id: Int, budgeted: Double) async throws -> APICategory {

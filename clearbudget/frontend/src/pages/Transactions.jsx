@@ -1,11 +1,118 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getTransactions, createTransaction, updateTransaction, deleteTransaction, getAccounts, getCategories } from '../api';
+import readXlsxFile from 'read-excel-file/browser';
+import { getTransactions, createTransaction, updateTransaction, deleteTransaction, importTransactions, getAccounts, getCategories } from '../api';
 import Modal from '../components/Modal';
 import { SkeletonTable } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import { useCurrency } from '../context/CurrencyContext';
 
 const emptyForm = { account_id: '', category_id: '', date: new Date().toISOString().split('T')[0], payee: '', memo: '', amount: '', cleared: false, type: 'expense' };
+
+const findColumn = (row, candidates) => {
+  const keys = Object.keys(row);
+  return keys.find((key) => {
+    const normalized = key.toLowerCase().replace(/[^a-zåäö0-9]/g, '');
+    return candidates.some((candidate) => normalized.includes(candidate));
+  });
+};
+
+const parseNumber = (value) => {
+  if (typeof value === 'number') return value;
+  const cleaned = String(value || '')
+    .replace(/\s/g, '')
+    .replace(/sek|kr/gi, '')
+    .replace(/[^\d,.-]/g, '');
+  if (!cleaned) return 0;
+  const decimal = cleaned.includes(',') && cleaned.lastIndexOf(',') > cleaned.lastIndexOf('.') ? cleaned.replace(/\./g, '').replace(',', '.') : cleaned.replace(/,/g, '');
+  return Number(decimal) || 0;
+};
+
+const parseDate = (value) => {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString().split('T')[0];
+  if (typeof value === 'number') {
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+    const date = new Date(excelEpoch.getTime() + value * 86400000);
+    if (!Number.isNaN(date.getTime())) return date.toISOString().split('T')[0];
+  }
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const direct = new Date(text);
+  if (!Number.isNaN(direct.getTime())) return direct.toISOString().split('T')[0];
+  const match = text.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/);
+  if (match) {
+    const [, day, month, year] = match;
+    const fullYear = year.length === 2 ? `20${year}` : year;
+    return `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  return '';
+};
+
+const parseDelimitedText = (text) => {
+  const delimiter = text.includes(';') && !text.includes(',') ? ';' : ',';
+  const rows = [];
+  let cell = '';
+  let row = [];
+  let quoted = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+    if (char === '"' && quoted && next === '"') {
+      cell += '"';
+      index += 1;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (char === delimiter && !quoted) {
+      row.push(cell);
+      cell = '';
+    } else if ((char === '\n' || char === '\r') && !quoted) {
+      if (char === '\r' && next === '\n') index += 1;
+      row.push(cell);
+      if (row.some((value) => String(value).trim())) rows.push(row);
+      row = [];
+      cell = '';
+    } else {
+      cell += char;
+    }
+  }
+
+  row.push(cell);
+  if (row.some((value) => String(value).trim())) rows.push(row);
+  return rows;
+};
+
+const rowsToObjects = (rows) => {
+  const [headers = [], ...body] = rows;
+  return body.map((row) => headers.reduce((object, header, index) => {
+    object[String(header || `Column ${index + 1}`).trim()] = row[index] ?? '';
+    return object;
+  }, {}));
+};
+
+const normalizeImportedRows = (rows) => {
+  if (!rows.length) return [];
+  const sample = rows[0];
+  const dateKey = findColumn(sample, ['date', 'datum', 'bokforingsdag', 'transaktionsdatum']);
+  const payeeKey = findColumn(sample, ['payee', 'merchant', 'description', 'beskrivning', 'text', 'mottagare', 'avsandare', 'namn']);
+  const memoKey = findColumn(sample, ['memo', 'note', 'message', 'meddelande', 'referens']);
+  const amountKey = findColumn(sample, ['amount', 'belopp', 'summa']);
+  const debitKey = findColumn(sample, ['debit', 'uttag', 'withdrawal']);
+  const creditKey = findColumn(sample, ['credit', 'insattning', 'deposit']);
+
+  return rows.map((row) => {
+    const debit = debitKey ? Math.abs(parseNumber(row[debitKey])) : 0;
+    const credit = creditKey ? Math.abs(parseNumber(row[creditKey])) : 0;
+    const amount = amountKey ? parseNumber(row[amountKey]) : credit - debit;
+    return {
+      date: parseDate(row[dateKey]),
+      payee: String(row[payeeKey] || 'Imported transaction').trim(),
+      memo: String(row[memoKey] || '').trim(),
+      amount,
+      cleared: true,
+      source: row,
+    };
+  }).filter((row) => row.date && row.amount);
+};
 
 function exportToCSV(txns) {
   const rows = txns.map((t) => [t.date, t.payee || '', t.category_name || 'Uncategorized', t.memo || '', t.amount, t.account_name || '', t.cleared ? 'Yes' : 'No']);
@@ -28,6 +135,13 @@ function Transactions() {
   const [filter, setFilter] = useState({ search: '', account: '', category: '', type: '', startDate: '', endDate: '', sort: 'newest' });
   const [formData, setFormData] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importRows, setImportRows] = useState([]);
+  const [importFileName, setImportFileName] = useState('');
+  const [importAccountId, setImportAccountId] = useState('');
+  const [importCategoryId, setImportCategoryId] = useState('');
+  const [importUpdateBalance, setImportUpdateBalance] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const loadData = useCallback(() => {
     Promise.all([getTransactions(), getAccounts(), getCategories()])
@@ -71,6 +185,64 @@ function Transactions() {
     catch (err) { toast('Failed: ' + err.message, 'error'); }
   };
 
+  const openImportModal = () => {
+    setImportRows([]);
+    setImportFileName('');
+    setImportAccountId(accounts[0]?.id || '');
+    setImportCategoryId('');
+    setImportUpdateBalance(false);
+    setShowImportModal(true);
+  };
+
+  const handleImportFile = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const isDelimited = /\.(csv|txt)$/i.test(file.name);
+      const rawRows = isDelimited
+        ? rowsToObjects(parseDelimitedText(await file.text()))
+        : rowsToObjects(await readXlsxFile(file));
+      const normalized = normalizeImportedRows(rawRows).slice(0, 500);
+      setImportFileName(file.name);
+      setImportRows(normalized);
+      if (!normalized.length) toast('No valid transactions found. Check date and amount columns.', 'error');
+      else toast(`Found ${normalized.length} transaction${normalized.length === 1 ? '' : 's'}`, 'success');
+    } catch (err) {
+      toast('Failed to read file: ' + err.message, 'error');
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  const handleImportSubmit = async (event) => {
+    event.preventDefault();
+    if (!importAccountId) {
+      toast('Choose the account these transactions belong to.', 'error');
+      return;
+    }
+    if (!importRows.length) {
+      toast('Choose an Excel or CSV file first.', 'error');
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const res = await importTransactions({
+        account_id: parseInt(importAccountId, 10),
+        category_id: importCategoryId ? parseInt(importCategoryId, 10) : null,
+        update_balance: importUpdateBalance,
+        transactions: importRows.map(({ source, ...row }) => row),
+      });
+      toast(`Imported ${res.data.imported} transaction${res.data.imported === 1 ? '' : 's'}`, 'success');
+      setShowImportModal(false);
+      loadData();
+    } catch (err) {
+      toast('Import failed: ' + err.message, 'error');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const filtered = transactions.filter((tx) => {
     if (filter.account && tx.account_id !== parseInt(filter.account)) return false;
     if (filter.category && tx.category_id !== parseInt(filter.category)) return false;
@@ -112,6 +284,10 @@ function Transactions() {
           <p className="text-[13px] text-neutral-500 dark:text-neutral-400 mt-0.5">{filtered.length} transaction{filtered.length !== 1 ? 's' : ''}{activeFilterCount ? ` across ${activeFilterCount} filter${activeFilterCount !== 1 ? 's' : ''}` : ''}</p>
         </div>
         <div className="flex gap-2 self-start">
+          <button className="btn-secondary text-[12px] px-3 py-[7px]" onClick={openImportModal}>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16" /></svg>
+            Import
+          </button>
           <button className="btn-secondary text-[12px] px-3 py-[7px]" onClick={() => exportToCSV(filtered)}>
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
             Export
@@ -230,6 +406,75 @@ function Transactions() {
           <div className="flex justify-end gap-2 pt-3 border-t border-neutral-100 dark:border-neutral-800">
             <button type="button" className="btn-secondary text-[12px] px-3 py-[7px]" onClick={() => setShowModal(false)}>Cancel</button>
             <button type="submit" className="btn-primary text-[12px] px-3 py-[7px]" disabled={saving}>{saving ? 'Saving...' : editingTx ? 'Update' : 'Add'}</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal isOpen={showImportModal} onClose={() => setShowImportModal(false)} title="Import Bank File">
+        <form onSubmit={handleImportSubmit} className="space-y-4">
+          <div className="rounded-lg border border-dashed border-neutral-300 bg-neutral-50/70 p-4 text-center dark:border-neutral-700 dark:bg-neutral-900/30">
+            <input id="transaction-import-file" type="file" className="sr-only" accept=".xlsx,.xls,.csv,.txt" onChange={handleImportFile} />
+            <label htmlFor="transaction-import-file" className="btn-secondary inline-flex cursor-pointer px-3 py-2 text-[12px]">
+              Choose Excel or CSV
+            </label>
+            <p className="mt-2 text-[11px] text-neutral-500 dark:text-neutral-400">
+              Supports common bank exports with date, payee/description, amount, debit, or credit columns.
+            </p>
+            {importFileName && <p className="mt-2 text-[11px] font-semibold text-[#09090b] dark:text-[#fafafa]">{importFileName}</p>}
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-[12px] font-medium text-neutral-600 dark:text-neutral-400">Destination account</label>
+              <select className="input" value={importAccountId} onChange={(e) => setImportAccountId(e.target.value)} required>
+                <option value="">Choose account</option>
+                {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-[12px] font-medium text-neutral-600 dark:text-neutral-400">Default category</label>
+              <select className="input" value={importCategoryId} onChange={(e) => setImportCategoryId(e.target.value)}>
+                <option value="">Leave uncategorized</option>
+                {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <label className="flex items-start gap-2 rounded-lg bg-neutral-50 p-3 text-[12px] text-neutral-600 dark:bg-neutral-900/40 dark:text-neutral-300">
+            <input type="checkbox" className="mt-0.5 rounded border-neutral-300 dark:border-neutral-600" checked={importUpdateBalance} onChange={(e) => setImportUpdateBalance(e.target.checked)} />
+            <span>
+              Update account balance from imported transactions.
+              <span className="mt-0.5 block text-[11px] text-neutral-500 dark:text-neutral-400">Keep this off if you already entered the real current balance from your bank.</span>
+            </span>
+          </label>
+
+          <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
+            <div className="flex items-center justify-between border-b border-neutral-100 px-3 py-2 dark:border-neutral-800">
+              <p className="text-[12px] font-semibold text-[#09090b] dark:text-[#fafafa]">Preview</p>
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400">{importRows.length} row{importRows.length === 1 ? '' : 's'}</p>
+            </div>
+            <div className="max-h-56 overflow-auto">
+              {importRows.length === 0 ? (
+                <p className="p-4 text-center text-[12px] text-neutral-500 dark:text-neutral-400">Choose a file to preview transactions.</p>
+              ) : (
+                <table className="table">
+                  <tbody>
+                    {importRows.slice(0, 8).map((row, index) => (
+                      <tr key={`${row.date}-${row.payee}-${index}`}>
+                        <td className="whitespace-nowrap text-[11px] text-neutral-500">{row.date}</td>
+                        <td className="text-[12px] font-medium text-[#09090b] dark:text-[#fafafa]">{row.payee}</td>
+                        <td className={`text-right text-[12px] font-bold tabular-nums ${row.amount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{formatCurrency(row.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+            <button type="button" className="btn-secondary text-[12px] px-3 py-[7px]" onClick={() => setShowImportModal(false)}>Cancel</button>
+            <button type="submit" className="btn-primary text-[12px] px-3 py-[7px]" disabled={importing || !importRows.length}>{importing ? 'Importing...' : 'Import Transactions'}</button>
           </div>
         </form>
       </Modal>

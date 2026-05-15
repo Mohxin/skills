@@ -9,17 +9,18 @@ const api = axios.create({
 
 // Accounts
 export const getAccounts = () => api.get('/accounts');
-export const getAccount = (id) => api.get(`/accounts?id=${id}`);
+export const getAccount = (id) => api.get(`/accounts/${id}`);
 export const createAccount = (data) => api.post('/accounts', data);
-export const updateAccount = (id, data) => api.put(`/accounts?id=${id}`, data);
-export const deleteAccount = (id) => api.delete(`/accounts?id=${id}`);
+export const updateAccount = (id, data) => api.put(`/accounts/${id}`, data);
+export const deleteAccount = (id) => api.delete(`/accounts/${id}`);
 
 // Transactions
 export const getTransactions = () => api.get('/transactions');
-export const getTransaction = (id) => api.get(`/transactions?id=${id}`);
+export const getTransaction = (id) => api.get(`/transactions/${id}`);
 export const createTransaction = (data) => api.post('/transactions', data);
-export const updateTransaction = (id, data) => api.put(`/transactions?id=${id}`, data);
-export const deleteTransaction = (id) => api.delete(`/transactions?id=${id}`);
+export const importTransactions = (data) => api.post('/transactions/import', data);
+export const updateTransaction = (id, data) => api.put(`/transactions/${id}`, data);
+export const deleteTransaction = (id) => api.delete(`/transactions/${id}`);
 
 // Categories
 export const getCategoryGroups = () => api.get('/categories/groups');

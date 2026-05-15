@@ -3,6 +3,33 @@ import supabase from '../db/client.js';
 
 const router = Router();
 
+const toNumber = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+};
+
+const applyAccountDelta = async (accountId, delta) => {
+  if (!accountId || !delta) return;
+  const { data: account } = await supabase.from('accounts').select('balance').eq('id', accountId).single();
+  if (!account) return;
+  await supabase
+    .from('accounts')
+    .update({ balance: parseFloat(account.balance) + delta, updated_at: new Date().toISOString() })
+    .eq('id', accountId);
+};
+
+const applyCategoryDeltas = async (categoryDeltas) => {
+  await Promise.all(Object.entries(categoryDeltas).map(async ([categoryId, delta]) => {
+    if (!categoryId || !delta) return;
+    const { data: category } = await supabase.from('categories').select('activity').eq('id', categoryId).single();
+    if (!category) return;
+    await supabase
+      .from('categories')
+      .update({ activity: parseFloat(category.activity) + delta })
+      .eq('id', categoryId);
+  }));
+};
+
 // Get all transactions (with joins)
 router.get('/', async (req, res) => {
   try {
@@ -24,6 +51,72 @@ router.get('/', async (req, res) => {
       categories: undefined,
     }));
     res.json(formatted);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Bulk import transactions from CSV/Excel-mapped rows
+router.post('/import', async (req, res) => {
+  try {
+    const { account_id, category_id, transactions = [], update_balance = false } = req.body;
+    const accountId = parseInt(account_id, 10);
+    const defaultCategoryId = category_id ? parseInt(category_id, 10) : null;
+
+    if (!accountId) return res.status(400).json({ error: 'account_id is required' });
+    if (!Array.isArray(transactions) || transactions.length === 0) {
+      return res.status(400).json({ error: 'transactions must contain at least one row' });
+    }
+
+    const rows = transactions
+      .map((tx) => {
+        const amount = toNumber(tx.amount);
+        const date = String(tx.date || '').slice(0, 10);
+        if (!date || !amount) return null;
+        return {
+          account_id: accountId,
+          category_id: tx.category_id ? parseInt(tx.category_id, 10) : defaultCategoryId,
+          date,
+          payee: tx.payee || 'Imported transaction',
+          memo: tx.memo || null,
+          amount,
+          cleared: tx.cleared !== false,
+        };
+      })
+      .filter(Boolean);
+
+    if (!rows.length) return res.status(400).json({ error: 'No valid transactions found to import' });
+
+    const { data: imported, error } = await supabase
+      .from('transactions')
+      .insert(rows)
+      .select(`
+        *,
+        accounts(name),
+        categories(name)
+      `);
+    if (error) throw new Error(error.message);
+
+    if (update_balance) {
+      const accountDelta = rows.reduce((sum, tx) => sum + tx.amount, 0);
+      await applyAccountDelta(accountId, accountDelta);
+    }
+
+    const categoryDeltas = rows.reduce((map, tx) => {
+      if (tx.category_id) map[tx.category_id] = (map[tx.category_id] || 0) + tx.amount;
+      return map;
+    }, {});
+    await applyCategoryDeltas(categoryDeltas);
+
+    const formatted = imported.map(tx => ({
+      ...tx,
+      account_name: tx.accounts?.name,
+      category_name: tx.categories?.name,
+      accounts: undefined,
+      categories: undefined,
+    }));
+
+    res.status(201).json({ imported: formatted.length, transactions: formatted });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -78,13 +171,7 @@ router.post('/', async (req, res) => {
     if (txError) throw new Error(txError.message);
 
     // Update account balance (fetch current, then update)
-    const { data: acc } = await supabase.from('accounts').select('balance').eq('id', account_id).single();
-    if (acc) {
-      await supabase
-        .from('accounts')
-        .update({ balance: parseFloat(acc.balance) + amount, updated_at: new Date().toISOString() })
-        .eq('id', account_id);
-    }
+    await applyAccountDelta(account_id, amount);
 
     // Update category activity
     if (category_id) {
@@ -154,13 +241,7 @@ router.put('/:id', async (req, res) => {
     if (txError) throw new Error(txError.message);
 
     // Apply new effects on account
-    const { data: newAcc } = await supabase.from('accounts').select('balance').eq('id', account_id).single();
-    if (newAcc) {
-      await supabase
-        .from('accounts')
-        .update({ balance: parseFloat(newAcc.balance) + amount, updated_at: new Date().toISOString() })
-        .eq('id', account_id);
-    }
+    await applyAccountDelta(account_id, amount);
     // Apply new effects on category
     if (category_id) {
       const { data: newCat } = await supabase.from('categories').select('activity').eq('id', category_id).single();
