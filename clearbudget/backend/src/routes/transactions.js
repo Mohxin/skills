@@ -8,6 +8,12 @@ const toNumber = (value) => {
   return Number.isFinite(number) ? number : 0;
 };
 
+const parseOptionalNumber = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+
 const applyAccountDelta = async (accountId, delta) => {
   if (!accountId || !delta) return;
   const { data: account } = await supabase.from('accounts').select('balance').eq('id', accountId).single();
@@ -15,6 +21,13 @@ const applyAccountDelta = async (accountId, delta) => {
   await supabase
     .from('accounts')
     .update({ balance: parseFloat(account.balance) + delta, updated_at: new Date().toISOString() })
+    .eq('id', accountId);
+};
+
+const setAccountBalance = async (accountId, balance) => {
+  await supabase
+    .from('accounts')
+    .update({ balance, updated_at: new Date().toISOString() })
     .eq('id', accountId);
 };
 
@@ -59,7 +72,14 @@ router.get('/', async (req, res) => {
 // Bulk import transactions from CSV/Excel-mapped rows
 router.post('/import', async (req, res) => {
   try {
-    const { account_id, category_id, transactions = [], update_balance = false } = req.body;
+    const {
+      account_id,
+      category_id,
+      transactions = [],
+      reconcile_balance = false,
+      statement_start_balance,
+      statement_end_balance,
+    } = req.body;
     const accountId = parseInt(account_id, 10);
     const defaultCategoryId = category_id ? parseInt(category_id, 10) : null;
 
@@ -87,6 +107,21 @@ router.post('/import', async (req, res) => {
 
     if (!rows.length) return res.status(400).json({ error: 'No valid transactions found to import' });
 
+    const importTotal = rows.reduce((sum, tx) => sum + tx.amount, 0);
+    const statementStartBalance = parseOptionalNumber(statement_start_balance);
+    const statementEndBalance = parseOptionalNumber(statement_end_balance);
+
+    if (reconcile_balance) {
+      if (statementStartBalance === null || statementEndBalance === null) {
+        return res.status(400).json({ error: 'statement_start_balance and statement_end_balance are required to reconcile an import' });
+      }
+
+      const expectedEndBalance = statementStartBalance + importTotal;
+      if (Math.abs(expectedEndBalance - statementEndBalance) > 0.01) {
+        return res.status(400).json({ error: 'Statement balances do not match the imported transaction total' });
+      }
+    }
+
     const { data: imported, error } = await supabase
       .from('transactions')
       .insert(rows)
@@ -97,16 +132,13 @@ router.post('/import', async (req, res) => {
       `);
     if (error) throw new Error(error.message);
 
-    if (update_balance) {
-      const accountDelta = rows.reduce((sum, tx) => sum + tx.amount, 0);
-      await applyAccountDelta(accountId, accountDelta);
-    }
-
     const categoryDeltas = rows.reduce((map, tx) => {
       if (tx.category_id) map[tx.category_id] = (map[tx.category_id] || 0) + tx.amount;
       return map;
     }, {});
     await applyCategoryDeltas(categoryDeltas);
+
+    if (reconcile_balance) await setAccountBalance(accountId, statementEndBalance);
 
     const formatted = imported.map(tx => ({
       ...tx,
@@ -116,7 +148,7 @@ router.post('/import', async (req, res) => {
       categories: undefined,
     }));
 
-    res.status(201).json({ imported: formatted.length, transactions: formatted });
+    res.status(201).json({ imported: formatted.length, transactions: formatted, reconciled: Boolean(reconcile_balance) });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

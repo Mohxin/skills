@@ -29,6 +29,9 @@ async function updateAccBalance(id, delta) {
   const { data } = await supabase.from('accounts').select('balance').eq('id', id).single();
   if (data) await supabase.from('accounts').update({ balance: parseFloat(data.balance) + delta, updated_at: new Date().toISOString() }).eq('id', id);
 }
+async function setAccBalance(id, balance) {
+  await supabase.from('accounts').update({ balance, updated_at: new Date().toISOString() }).eq('id', id);
+}
 async function updateCatActivity(id, delta) {
   const { data } = await supabase.from('categories').select('activity').eq('id', id).single();
   if (data) await supabase.from('categories').update({ activity: parseFloat(data.activity) + delta }).eq('id', id);
@@ -39,6 +42,11 @@ const fmtTx = (tx) => ({ ...tx, account_name: tx.accounts?.name, category_name: 
 const toNumber = (value) => {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
+};
+const parseOptionalNumber = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 };
 
 export default async function handler(req, res) {
@@ -169,25 +177,36 @@ export default async function handler(req, res) {
 
           if (!rows.length) return serverErr(res, 'No valid transactions found to import', 400);
 
+          const importTotal = rows.reduce((sum, tx) => sum + tx.amount, 0);
+          const statementStartBalance = parseOptionalNumber(body.statement_start_balance);
+          const statementEndBalance = parseOptionalNumber(body.statement_end_balance);
+
+          if (body.reconcile_balance) {
+            if (statementStartBalance === null || statementEndBalance === null) {
+              return serverErr(res, 'statement_start_balance and statement_end_balance are required to reconcile an import', 400);
+            }
+
+            const expectedEndBalance = statementStartBalance + importTotal;
+            if (Math.abs(expectedEndBalance - statementEndBalance) > 0.01) {
+              return serverErr(res, 'Statement balances do not match the imported transaction total', 400);
+            }
+          }
+
           const { data: imported, error: importError } = await supabase
             .from('transactions')
             .insert(rows)
             .select(txSelect);
           if (importError) return serverErr(res, importError.message);
 
-          if (body.update_balance) {
-            const accountDelta = rows.reduce((sum, tx) => sum + tx.amount, 0);
-            await updateAccBalance(accountId, accountDelta);
-          }
-
           const categoryDeltas = rows.reduce((map, tx) => {
             if (tx.category_id) map[tx.category_id] = (map[tx.category_id] || 0) + tx.amount;
             return map;
           }, {});
           await Promise.all(Object.entries(categoryDeltas).map(([categoryId, delta]) => updateCatActivity(categoryId, delta)));
+          if (body.reconcile_balance) await setAccBalance(accountId, statementEndBalance);
 
           const formatted = imported.map(fmtTx);
-          return created(res, { imported: formatted.length, transactions: formatted });
+          return created(res, { imported: formatted.length, transactions: formatted, reconciled: Boolean(body.reconcile_balance) });
         }
 
         const { data: tx, error: te } = await supabase.from('transactions').insert({ account_id: body.account_id, category_id: body.category_id || null, date: body.date, payee: body.payee, memo: body.memo, amount: body.amount, cleared: body.cleared || false }).select().single();

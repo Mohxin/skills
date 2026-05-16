@@ -35,7 +35,9 @@ function Transactions() {
   const [importFileName, setImportFileName] = useState('');
   const [importAccountId, setImportAccountId] = useState('');
   const [importCategoryId, setImportCategoryId] = useState('');
-  const [importUpdateBalance, setImportUpdateBalance] = useState(false);
+  const [statementStartBalance, setStatementStartBalance] = useState('');
+  const [statementEndBalance, setStatementEndBalance] = useState('');
+  const [syncStatementBalance, setSyncStatementBalance] = useState(false);
   const [smartCategorize, setSmartCategorize] = useState(true);
   const [importing, setImporting] = useState(false);
 
@@ -86,7 +88,9 @@ function Transactions() {
     setImportFileName('');
     setImportAccountId(accounts[0]?.id || '');
     setImportCategoryId('');
-    setImportUpdateBalance(false);
+    setStatementStartBalance('');
+    setStatementEndBalance('');
+    setSyncStatementBalance(false);
     setSmartCategorize(true);
     setShowImportModal(true);
   };
@@ -144,6 +148,19 @@ function Transactions() {
   };
 
   const stripImportMetadata = ({ source, category_name, confidence, ...row }) => row;
+  const parseBalanceInput = (value) => {
+    if (value === '' || value === null || value === undefined) return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  };
+
+  const importTotal = importRows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+  const statementStart = parseBalanceInput(statementStartBalance);
+  const statementEnd = parseBalanceInput(statementEndBalance);
+  const hasStatementBalances = statementStart !== null && statementEnd !== null;
+  const expectedStatementEnd = hasStatementBalances ? statementStart + importTotal : null;
+  const reconciliationDifference = hasStatementBalances ? statementEnd - expectedStatementEnd : null;
+  const reconciliationMatched = hasStatementBalances && Math.abs(reconciliationDifference) < 0.01;
 
   const handleImportFile = async (event) => {
     const file = event.target.files?.[0];
@@ -153,6 +170,7 @@ function Transactions() {
       const categorized = await applySmartCategories(normalized);
       setImportFileName(file.name);
       setImportRows(categorized);
+      setSyncStatementBalance(false);
       if (!categorized.length) toast('No valid transactions found. Check date and amount columns.', 'error');
       else toast(`Found ${categorized.length} transaction${categorized.length === 1 ? '' : 's'} with smart categories`, 'success');
     } catch (err) {
@@ -172,6 +190,10 @@ function Transactions() {
       toast('Choose an Excel or CSV file first.', 'error');
       return;
     }
+    if (syncStatementBalance && !reconciliationMatched) {
+      toast('Statement balances must match the imported total before updating the account balance.', 'error');
+      return;
+    }
 
     setImporting(true);
     try {
@@ -181,10 +203,13 @@ function Transactions() {
       const res = await importTransactions({
         account_id: parseInt(importAccountId, 10),
         category_id: importCategoryId ? parseInt(importCategoryId, 10) : null,
-        update_balance: importUpdateBalance,
+        reconcile_balance: syncStatementBalance && reconciliationMatched,
+        statement_start_balance: statementStart,
+        statement_end_balance: statementEnd,
         transactions: rowsToImport.map(stripImportMetadata),
       });
-      toast(`Imported ${res.data.imported} transaction${res.data.imported === 1 ? '' : 's'}`, 'success');
+      const balanceMessage = res.data.reconciled ? ' and updated the account balance' : '';
+      toast(`Imported ${res.data.imported} transaction${res.data.imported === 1 ? '' : 's'}${balanceMessage}`, 'success');
       setShowImportModal(false);
       loadData();
     } catch (err) {
@@ -412,13 +437,80 @@ function Transactions() {
             )}
           </label>
 
-          <label className="flex items-start gap-2 rounded-lg bg-neutral-50 p-3 text-[12px] text-neutral-600 dark:bg-neutral-900/40 dark:text-neutral-300">
-            <input type="checkbox" className="mt-0.5 rounded border-neutral-300 dark:border-neutral-600" checked={importUpdateBalance} onChange={(e) => setImportUpdateBalance(e.target.checked)} />
-            <span>
-              Update account balance from imported transactions.
-              <span className="mt-0.5 block text-[11px] text-neutral-500 dark:text-neutral-400">Keep this off if you already entered the real current balance from your bank.</span>
-            </span>
-          </label>
+          <div className="rounded-lg border border-neutral-200 bg-neutral-50/80 p-3 dark:border-neutral-800 dark:bg-neutral-900/40">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="text-[12px] font-semibold text-[#09090b] dark:text-[#fafafa]">Statement balance check</p>
+                <p className="mt-0.5 text-[11px] text-neutral-500 dark:text-neutral-400">Use this when the file covers the full statement period. Otherwise your account balance stays unchanged.</p>
+              </div>
+              <p className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400">Import total: {formatCurrency(importTotal)}</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-[12px] font-medium text-neutral-600 dark:text-neutral-400">Statement start balance</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="input"
+                  value={statementStartBalance}
+                  onChange={(event) => {
+                    setStatementStartBalance(event.target.value);
+                    setSyncStatementBalance(false);
+                  }}
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[12px] font-medium text-neutral-600 dark:text-neutral-400">Statement end balance</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="input"
+                  value={statementEndBalance}
+                  onChange={(event) => {
+                    setStatementEndBalance(event.target.value);
+                    setSyncStatementBalance(false);
+                  }}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            {hasStatementBalances && (
+              <div className={`mt-3 rounded-lg border p-3 text-[12px] ${reconciliationMatched ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-200' : 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200'}`}>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <div>
+                    <span className="block text-[10px] font-semibold uppercase tracking-[0.06em] opacity-70">Expected end</span>
+                    <span className="font-bold tabular-nums">{formatCurrency(expectedStatementEnd)}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-semibold uppercase tracking-[0.06em] opacity-70">Statement end</span>
+                    <span className="font-bold tabular-nums">{formatCurrency(statementEnd)}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-semibold uppercase tracking-[0.06em] opacity-70">Difference</span>
+                    <span className="font-bold tabular-nums">{formatCurrency(reconciliationDifference)}</span>
+                  </div>
+                </div>
+                <p className="mt-2 text-[11px]">{reconciliationMatched ? 'Matched. You can set the account balance to the statement end balance after import.' : 'Not matched yet. Check whether the file is missing rows, duplicated rows, or uses the opposite sign convention.'}</p>
+              </div>
+            )}
+
+            <label className={`mt-3 flex items-start gap-2 rounded-lg p-3 text-[12px] ${reconciliationMatched ? 'bg-white text-neutral-700 ring-1 ring-neutral-200 dark:bg-neutral-950/40 dark:text-neutral-300 dark:ring-neutral-800' : 'bg-neutral-100 text-neutral-400 dark:bg-neutral-950/20 dark:text-neutral-500'}`}>
+              <input
+                type="checkbox"
+                className="mt-0.5 rounded border-neutral-300 dark:border-neutral-600"
+                checked={syncStatementBalance && reconciliationMatched}
+                disabled={!reconciliationMatched}
+                onChange={(event) => setSyncStatementBalance(event.target.checked)}
+              />
+              <span>
+                Set account balance to statement end balance after import.
+                <span className="mt-0.5 block text-[11px] text-neutral-500 dark:text-neutral-400">This replaces the old imported-total adjustment and only unlocks after the statement math matches.</span>
+              </span>
+            </label>
+          </div>
 
           <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
             <div className="flex items-center justify-between border-b border-neutral-100 px-3 py-2 dark:border-neutral-800">
