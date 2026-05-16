@@ -13,6 +13,9 @@ A modern, full-featured envelope budgeting app built with React, Supabase, and d
 ### 💳 Transactions
 - ➕ **Quick Add** — Fast transaction entry
 - 🔍 **Search & Filter** — By payee, category, account
+- 📥 **Bank File Import** — Import Excel or CSV exports from Handelsbanken and common bank formats
+- 🧠 **Smart Categorization** — Automatically suggests categories for imported merchants and learns from existing data
+- ✅ **Statement Reconciliation** — Optionally update account balances only when statement start/end balances match the imported total
 - 📥 **CSV Export** — Download your data anytime
 - 🏷️ **Tags** — Organize transactions with custom tags
 - ✏️ **Full CRUD** — Edit, delete, clear transactions
@@ -50,7 +53,8 @@ A modern, full-featured envelope budgeting app built with React, Supabase, and d
 
 ### 🏦 Accounts
 - 💼 **Multiple Types** — Checking, savings, credit, cash
-- 💎 **Net Worth** — Automatic calculation
+- 💎 **Net Worth** — Calculated from the latest account balance snapshots
+- 🧾 **Manual Balance Snapshots** — Keep balances aligned with your real bank account without requiring bank API access
 - 🎨 **Colored Icons** — Visual distinction
 
 ## 🚀 Quick Start
@@ -91,9 +95,43 @@ cd backend && npm run start
 cd ../frontend && npm run dev
 ```
 
-6. Add your real accounts, categories, transactions, recurring bills, and goals from the app UI.
+6. Add your real accounts with their current balances.
+7. Import transactions from bank exports, or add transactions manually.
 
 For deployment, add the same Supabase environment variables in Vercel. The frontend uses `/api` in production, so it will talk to the deployed serverless API automatically.
+
+## 📥 Import Bank Files
+
+ClearBudget is designed to work even when direct bank integrations are unavailable. Export transactions from your bank as Excel or CSV, then import them from the Transactions page.
+
+Supported import behavior:
+
+- Reads Excel (`.xlsx`, `.xls`) and CSV/TXT files.
+- Supports Handelsbanken exports and common columns such as date, description/text, amount, debit, and credit.
+- Lets you choose the destination account before importing.
+- Suggests categories automatically for merchants such as grocery stores, transit, utilities, subscriptions, donations, and transfers.
+- Lets you manually adjust categories in the preview before saving.
+
+### Balance Handling
+
+Imported transactions do not automatically change an account balance by adding the transaction total. This prevents partial exports from making the balance wrong.
+
+Use this workflow instead:
+
+1. Set the real current balance on the Accounts page when you create or edit an account.
+2. Import transaction files to build your spending history.
+3. If your import covers a full statement period, enter:
+   - Statement start balance
+   - Statement end balance
+4. ClearBudget calculates:
+
+```text
+expected end balance = statement start balance + imported transaction total
+```
+
+5. The app unlocks "Set account balance to statement end balance" only when the expected end balance matches the statement end balance within 0.01.
+
+If the numbers do not match, the import is still useful for transaction history, but the account balance stays unchanged.
 
 ## 📦 Deploy to Vercel
 
@@ -144,6 +182,7 @@ clearbudget/
 |--------|------|-------------|
 | GET/POST | `/api/accounts` | Account CRUD |
 | GET/POST | `/api/transactions` | Transaction CRUD |
+| POST | `/api/transactions/import` | Import bank file rows with optional statement reconciliation |
 | GET/POST | `/api/categories/groups` | Category groups |
 | GET/POST/PUT/DELETE | `/api/recurring` | Recurring bills |
 | GET/POST/PUT/DELETE | `/api/goals` | Goals CRUD |
