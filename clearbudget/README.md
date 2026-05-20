@@ -85,8 +85,10 @@ ClearBudget reads and writes to Supabase through the backend API. To use your ow
 SUPABASE_URL=your-project-url
 SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-OPENAI_API_KEY=your-openai-api-key
 # Optional:
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+LOCAL_INSIGHTS_MODEL=qwen3.5:latest
+OPENAI_API_KEY=your-openai-api-key
 OPENAI_INSIGHTS_MODEL=gpt-5-mini
 OPENAI_INSIGHTS_REASONING_EFFORT=medium
 ```
@@ -104,7 +106,9 @@ cd ../frontend && npm run dev
 
 For deployment, add the same Supabase environment variables in Vercel. The frontend uses `/api` in production, so it will talk to the deployed serverless API automatically.
 
-If `OPENAI_API_KEY` is not set, the AI Money Coach still returns local rule-based suggestions. Set the key to enable reasoning-model suggestions from the OpenAI Responses API.
+The AI Money Coach tries local Ollama first using `qwen3.5:latest`. If local Qwen is unavailable, it falls back to OpenAI when `OPENAI_API_KEY` is set, then to local rule-based suggestions as the final safety net.
+
+For local development, keep Ollama running on your machine. For Vercel deployments, `127.0.0.1` points to Vercel's serverless runtime, not your Mac, so use OpenAI as the hosted fallback or point `OLLAMA_BASE_URL` to a reachable hosted Ollama endpoint.
 
 ## 📥 Import Bank Files
 
@@ -149,7 +153,9 @@ Add these environment variables in Vercel:
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `OPENAI_API_KEY` for AI Money Coach suggestions
+- `OLLAMA_BASE_URL` optional, defaults to `http://127.0.0.1:11434`
+- `LOCAL_INSIGHTS_MODEL` optional, defaults to `qwen3.5:latest`
+- `OPENAI_API_KEY` optional fallback for AI Money Coach suggestions
 - `OPENAI_INSIGHTS_MODEL` optional, defaults to `gpt-5-mini`
 - `OPENAI_INSIGHTS_REASONING_EFFORT` optional, defaults to `medium`
 

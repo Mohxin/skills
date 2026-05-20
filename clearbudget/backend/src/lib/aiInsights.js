@@ -368,57 +368,154 @@ const extractResponseText = (response) => {
   return text?.text || '';
 };
 
+const coachSystemPrompt = 'You are a budgeting assistant inside a personal finance app. Analyze aggregated spending patterns, budget gaps, recurring costs, categorization quality, and cash-flow pressure. Give practical, conservative suggestions. Do not provide tax, legal, investment, credit, or debt restructuring advice. Do not shame the user. Return only JSON that matches the requested schema.';
+
+const cleanJsonText = (text) => {
+  const trimmed = String(text || '').trim();
+  if (trimmed.startsWith('```')) {
+    return trimmed.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  }
+  const firstBrace = trimmed.indexOf('{');
+  const lastBrace = trimmed.lastIndexOf('}');
+  if (firstBrace >= 0 && lastBrace > firstBrace) return trimmed.slice(firstBrace, lastBrace + 1);
+  return trimmed;
+};
+
+const normalizeModelInsights = (insights) => ({
+  summary: String(insights.summary || 'Here are the most important budget signals from your recent activity.'),
+  suggestions: Array.isArray(insights.suggestions) && insights.suggestions.length
+    ? insights.suggestions.slice(0, 5).map((item) => ({
+      type: item.type || 'savings_opportunity',
+      title: item.title || 'Review spending pattern',
+      impact: ['high', 'medium', 'low'].includes(item.impact) ? item.impact : 'medium',
+      amount: Number(item.amount) || 0,
+      reason: item.reason || 'This pattern is worth reviewing against your budget.',
+      action_label: item.action_label || 'Open Insights',
+      action_path: item.action_path || '/insights',
+    }))
+    : buildLocalInsights({ ...insights, categories: [], merchants: [], totals: {}, uncategorized: {}, unusual_transactions: [] }).suggestions,
+  alerts: Array.isArray(insights.alerts)
+    ? insights.alerts.slice(0, 4).map((item) => ({
+      type: item.type || 'spending_trend',
+      title: item.title || 'Review budget signal',
+      impact: ['high', 'medium', 'low'].includes(item.impact) ? item.impact : 'medium',
+      reason: item.reason || 'This item may need attention.',
+    }))
+    : [],
+});
+
+const requestOllamaInsights = async (snapshot) => {
+  const model = process.env.LOCAL_INSIGHTS_MODEL || 'qwen3.5:latest';
+  const baseUrl = process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434';
+  const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      stream: false,
+      format: 'json',
+      options: {
+        temperature: 0.2,
+      },
+      messages: [
+        {
+          role: 'system',
+          content: coachSystemPrompt,
+        },
+        {
+          role: 'user',
+          content: [
+            'Analyze this ClearBudget financial snapshot and return JSON only.',
+            'Use this exact shape: {"summary": string, "suggestions": [{"type": string, "title": string, "impact": "high|medium|low", "amount": number, "reason": string, "action_label": string, "action_path": string}], "alerts": [{"type": string, "title": string, "impact": "high|medium|low", "reason": string}]}',
+            'Allowed action_path values: /budget, /transactions, /recurring, /goals, /insights, /reports, /planner.',
+            JSON.stringify(snapshot),
+          ].join('\n\n'),
+        },
+      ],
+    }),
+  });
+
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || 'Local Qwen insights request failed');
+
+  const parsed = normalizeModelInsights(JSON.parse(cleanJsonText(payload.message?.content || payload.response)));
+  return {
+    period: snapshot.period,
+    provider: 'ollama',
+    model,
+    generated_at: new Date().toISOString(),
+    ...parsed,
+    snapshot,
+  };
+};
+
+const requestOpenAiInsights = async (snapshot) => {
+  if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY is not set');
+
+  const model = process.env.OPENAI_INSIGHTS_MODEL || 'gpt-5-mini';
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      reasoning: { effort: process.env.OPENAI_INSIGHTS_REASONING_EFFORT || 'medium' },
+      input: [
+        {
+          role: 'system',
+          content: coachSystemPrompt,
+        },
+        {
+          role: 'user',
+          content: JSON.stringify(snapshot),
+        },
+      ],
+      text: {
+        format: {
+          type: 'json_schema',
+          name: 'clearbudget_ai_insights',
+          strict: true,
+          schema: insightsSchema,
+        },
+      },
+    }),
+  });
+
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error?.message || 'OpenAI insights request failed');
+
+  const parsed = JSON.parse(extractResponseText(payload));
+  return {
+    period: snapshot.period,
+    provider: 'openai',
+    model,
+    generated_at: new Date().toISOString(),
+    ...parsed,
+    snapshot,
+  };
+};
+
 export async function generateAiInsights(snapshot) {
-  if (!process.env.OPENAI_API_KEY) return buildLocalInsights(snapshot);
+  const warnings = [];
 
   try {
-    const model = process.env.OPENAI_INSIGHTS_MODEL || 'gpt-5-mini';
-    const response = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        reasoning: { effort: process.env.OPENAI_INSIGHTS_REASONING_EFFORT || 'medium' },
-        input: [
-          {
-            role: 'system',
-            content: 'You are a budgeting assistant inside a personal finance app. Analyze aggregated spending patterns, budget gaps, recurring costs, categorization quality, and cash-flow pressure. Give practical, conservative suggestions. Do not provide tax, legal, investment, credit, or debt restructuring advice. Do not shame the user. Return only JSON that matches the schema.',
-          },
-          {
-            role: 'user',
-            content: JSON.stringify(snapshot),
-          },
-        ],
-        text: {
-          format: {
-            type: 'json_schema',
-            name: 'clearbudget_ai_insights',
-            strict: true,
-            schema: insightsSchema,
-          },
-        },
-      }),
-    });
+    return await requestOllamaInsights(snapshot);
+  } catch (error) {
+    warnings.push(`Local Qwen unavailable: ${error.message}`);
+  }
 
-    const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error?.message || 'OpenAI insights request failed');
-
-    const parsed = JSON.parse(extractResponseText(payload));
+  try {
     return {
-      period: snapshot.period,
-      provider: 'openai',
-      model,
-      generated_at: new Date().toISOString(),
-      ...parsed,
-      snapshot,
+      ...await requestOpenAiInsights(snapshot),
+      warning: warnings.join(' '),
     };
   } catch (error) {
+    warnings.push(`OpenAI unavailable: ${error.message}`);
     return {
       ...buildLocalInsights(snapshot),
-      warning: `OpenAI unavailable: ${error.message}`,
+      warning: warnings.join(' '),
     };
   }
 }

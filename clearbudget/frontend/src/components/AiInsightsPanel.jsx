@@ -21,6 +21,13 @@ const typeLabels = {
   merchant_review: 'Merchant',
 };
 
+const providerLabel = (ai) => {
+  if (!ai) return 'Reasoned suggestions from real transaction patterns';
+  if (ai.provider === 'ollama') return `${ai.period} · Local Qwen · ${ai.model}`;
+  if (ai.provider === 'openai') return `${ai.period} · OpenAI · ${ai.model || 'model'}`;
+  return `${ai.period} · local rules`;
+};
+
 function SuggestionCard({ suggestion, formatCurrency }) {
   const amount = Number(suggestion.amount || 0);
   return (
@@ -81,7 +88,7 @@ function AiInsightsPanel({ compact = false }) {
     try {
       const response = await generateAiInsights();
       setAi(response.data);
-      toast(response.data.provider === 'openai' ? 'AI suggestions generated' : 'Local suggestions generated', 'success');
+      toast(response.data.provider === 'ollama' ? 'Qwen suggestions generated' : response.data.provider === 'openai' ? 'OpenAI suggestions generated' : 'Local suggestions generated', 'success');
     } catch (error) {
       toast('AI insights failed: ' + error.message, 'error');
     } finally {
@@ -98,7 +105,7 @@ function AiInsightsPanel({ compact = false }) {
         <div>
           <h2 className="text-[13px] font-semibold text-[#09090b] dark:text-[#fafafa]">AI Money Coach</h2>
           <p className="mt-0.5 text-[11px] text-neutral-500 dark:text-neutral-400">
-            {ai ? `${ai.period} · ${ai.provider === 'openai' ? ai.model || 'OpenAI' : 'local fallback'}` : 'Reasoned suggestions from real transaction patterns'}
+            {providerLabel(ai)}
           </p>
         </div>
         <button type="button" className="btn-primary px-3 py-[7px] text-[12px]" onClick={handleGenerate} disabled={loading}>
