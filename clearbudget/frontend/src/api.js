@@ -54,4 +54,7 @@ export const getRecentTransactions = (limit = 10) => api.get(`/reports/recent-tr
 export const getInsights = () => api.get('/reports/insights');
 export const getCashFlowForecast = (days = 30) => api.get(`/reports/cash-flow-forecast?days=${days}`);
 
+// AI
+export const generateAiInsights = () => api.post('/ai/insights', {});
+
 export default api;

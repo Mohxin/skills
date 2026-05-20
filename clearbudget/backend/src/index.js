@@ -7,6 +7,7 @@ import categoriesRouter from './routes/categories.js';
 import goalsRouter from './routes/goals.js';
 import reportsRouter from './routes/reports.js';
 import recurringRouter from './routes/recurring.js';
+import aiRouter from './routes/ai.js';
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use('/api/categories', categoriesRouter);
 app.use('/api/goals', goalsRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/recurring', recurringRouter);
+app.use('/api/ai', aiRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getBudgetOverview, getRecentTransactions, getSpendingByCategory, getRecurring, getGoals, getCashFlowForecast } from '../api';
 import { DashboardSkeleton } from '../components/Skeleton';
 import CashFlowForecast from '../components/CashFlowForecast';
+import AiInsightsPanel from '../components/AiInsightsPanel';
 import { useCurrency } from '../context/CurrencyContext';
 
 function useDashboardData() {
@@ -535,6 +536,8 @@ function Dashboard() {
       </div>
 
       <CashFlowForecast forecast={forecast} compact />
+
+      <AiInsightsPanel compact />
 
       {/* Two column */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 stagger">

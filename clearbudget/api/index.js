@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { buildFinancialSnapshot, generateAiInsights } from '../backend/src/lib/aiInsights.js';
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -59,6 +60,13 @@ export default async function handler(req, res) {
     // === HEALTH ===
     if (path[0] === 'health' && req.method === 'GET') {
       return ok(res, { status: 'ok', timestamp: new Date().toISOString() });
+    }
+
+    // === AI INSIGHTS ===
+    if (path[0] === 'ai' && path[1] === 'insights' && req.method === 'POST') {
+      const snapshot = await buildFinancialSnapshot(supabase);
+      const insights = await generateAiInsights(snapshot);
+      return ok(res, insights);
     }
 
     // === ACCOUNTS ===

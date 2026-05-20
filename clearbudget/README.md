@@ -85,6 +85,10 @@ ClearBudget reads and writes to Supabase through the backend API. To use your ow
 SUPABASE_URL=your-project-url
 SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+OPENAI_API_KEY=your-openai-api-key
+# Optional:
+OPENAI_INSIGHTS_MODEL=gpt-5-mini
+OPENAI_INSIGHTS_REASONING_EFFORT=medium
 ```
 
 4. Run `npm run db:clear` if you want empty tables before importing real data.
@@ -99,6 +103,8 @@ cd ../frontend && npm run dev
 7. Import transactions from bank exports, or add transactions manually.
 
 For deployment, add the same Supabase environment variables in Vercel. The frontend uses `/api` in production, so it will talk to the deployed serverless API automatically.
+
+If `OPENAI_API_KEY` is not set, the AI Money Coach still returns local rule-based suggestions. Set the key to enable reasoning-model suggestions from the OpenAI Responses API.
 
 ## 📥 Import Bank Files
 
@@ -143,6 +149,9 @@ Add these environment variables in Vercel:
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `OPENAI_API_KEY` for AI Money Coach suggestions
+- `OPENAI_INSIGHTS_MODEL` optional, defaults to `gpt-5-mini`
+- `OPENAI_INSIGHTS_REASONING_EFFORT` optional, defaults to `medium`
 
 ## 🏗️ Tech Stack
 

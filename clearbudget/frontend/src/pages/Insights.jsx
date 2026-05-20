@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getAccounts, getGoals, getInsights, getRecurring, getSpendingByCategory } from '../api';
 import { useCurrency } from '../context/CurrencyContext';
 import { SkeletonCard } from '../components/Skeleton';
+import AiInsightsPanel from '../components/AiInsightsPanel';
 
 function InsightMetric({ label, value, helper, tone = 'neutral' }) {
   const tones = {
@@ -152,6 +153,8 @@ function Insights() {
           </div>
         </div>
       </div>
+
+      <AiInsightsPanel />
 
       {/* Metrics */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
